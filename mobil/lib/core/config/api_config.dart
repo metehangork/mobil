@@ -3,8 +3,8 @@ class ApiConfig {
   // Base URLs
   // PRODUCTION: Alan adı - kafadarkampus.online (HTTPS çalışmıyor şimdilik)
   // DEV: Test için IP adresi kullanılabilir
-  static const String baseUrl = 'http://37.148.210.244:3000'; // HTTP çalışıyor!
-  static const String baseUrlDev = 'https://kafadarkampus.online'; // HTTPS (henüz çalışmıyor)
+  static const String baseUrl = 'https://kafadarkampus.online'; // HTTP çalışıyor!
+  static const String baseUrlDev = 'http://37.148.210.244:3000'; // HTTPS (henüz çalışmıyor)
   static const String apiVersion = '/api';
   
   // Full API URL
