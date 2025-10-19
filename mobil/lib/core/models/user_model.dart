@@ -65,6 +65,10 @@ class UserModel extends Equatable {
     this.badges = const [],
   });
 
+  // firstName ve lastName getter'ları
+  String get firstName => name.split(' ').first;
+  String get lastName => name.split(' ').length > 1 ? name.split(' ').sublist(1).join(' ') : '';
+
   factory UserModel.fromJson(Map<String, dynamic> json) =>
       _$UserModelFromJson(json);
 

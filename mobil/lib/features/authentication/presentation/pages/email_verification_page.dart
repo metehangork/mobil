@@ -6,7 +6,7 @@ import '../bloc/auth_bloc.dart';
 
 class EmailVerificationPage extends StatefulWidget {
   final String email;
-  
+
   const EmailVerificationPage({super.key, required this.email});
 
   @override
@@ -20,10 +20,10 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
     (index) => TextEditingController(),
   );
   final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
-  
+
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  
+
   int _countdown = 60;
   bool _canResend = false;
 
@@ -37,7 +37,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    
+
     _animationController.forward();
     _startCountdown();
   }
@@ -59,7 +59,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
       _countdown = 60;
       _canResend = false;
     });
-    
+
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted && _countdown > 0) {
         setState(() {
@@ -123,7 +123,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                
+
                 // Icon
                 Container(
                   width: 100,
@@ -138,31 +138,31 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Başlık
                 Text(
                   'E-postanı Doğrula',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Açıklama
                 Text(
                   '${widget.email} adresine gönderilen\n6 haneli doğrulama kodunu gir',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   widget.email,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -170,24 +170,24 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
                         color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // Doğrulama kodu input
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (index) => _buildCodeInput(index)),
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Geri sayım ve tekrar gönder
                 if (!_canResend)
                   Text(
                     'Yeni kod isteyebilmek için $_countdown saniye bekle',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   )
                 else
                   Row(
@@ -206,9 +206,9 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
                       ),
                     ],
                   ),
-                
+
                 const Spacer(),
-                
+
                 // Doğrula butonu
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, state) {
@@ -226,7 +226,8 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Text(
                                 'Doğrula',
@@ -239,7 +240,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 20),
               ],
             ),
@@ -270,8 +271,8 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
         keyboardType: TextInputType.number,
         maxLength: 1,
         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+              fontWeight: FontWeight.bold,
+            ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
         ],
@@ -281,7 +282,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
         ),
         onChanged: (value) {
           setState(() {});
-          
+
           if (value.isNotEmpty) {
             // Sonraki input'a geç
             if (index < 5) {
@@ -309,11 +310,11 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
 
   void _verifyCode() {
     final code = _controllers.map((c) => c.text).join();
-    
+
     if (code.length == 6) {
       context.read<AuthBloc>().add(
-        AuthVerifyEmailEvent(email: widget.email, code: code),
-      );
+            AuthVerifyEmailEvent(email: widget.email, code: code),
+          );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -325,9 +326,9 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
   }
 
   void _resendCode() {
-    context.read<AuthBloc>().add(const AuthResendCodeEvent());
+    context.read<AuthBloc>().add(AuthResendCodeEvent(email: widget.email));
     _startCountdown();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Doğrulama kodu tekrar gönderildi'),

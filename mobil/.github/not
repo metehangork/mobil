@@ -1,0 +1,351 @@
+ EKSİK/GELİŞTİRİLMESİ GEREKENLER
+1. Backend Eksikleri
+🔴 Kritik Eksikler:
+❌ User Profile Routes - Profil güncelleme endpoint'leri yok
+❌ Match Algorithm - Ders/okul bazlı eşleştirme algoritması yok
+❌ Course Routes - Ders ekleme/listeleme endpoint'leri yok
+❌ Groups Routes - Grup sistemi yok
+❌ Notifications Routes - Bildirim endpoint'leri yok
+❌ File Upload - Profil fotoğrafı/dosya yükleme sistemi yok
+❌ WebSocket/Socket.io - Gerçek zamanlı mesajlaşma yok
+🟡 Önemli Eksikler:
+⚠️ Redis cache (şu an memory-based)
+⚠️ Input validation güçlendirilmeli
+⚠️ Error handling standartlaştırılmalı
+⚠️ API documentation (Swagger/OpenAPI)
+⚠️ Unit/Integration testleri yok
+⚠️ Rate limiting daha granüler olmalı
+2. Frontend (Flutter) Eksikleri
+🔴 Kritik:
+❌ API integration tamamlanmalı
+❌ Chat UI implementasyonu
+❌ Profile screens
+❌ Match screens
+❌ Course selection screens
+❌ Group screens
+🟡 Önemli:
+⚠️ Error handling
+⚠️ Loading states
+⚠️ Offline mode
+⚠️ Push notifications
+3. Database Eksikleri
+🟠 Veri Eksikleri:
+❌ schools tablosu boş (okul verileri girilmeli)
+❌ courses tablosu boş (ders verileri girilmeli)
+✅ departments tablosu DOLU (500+ kayıt var!)
+
+
+Size 3 seçenek sunuyorum:
+
+Seçenek A: Veri Tabanını Tamamla ⭐ ÖNERİLİR
+Schools ve Courses tablolarını dolduralım (Türkiye'deki üniversiteler + popüler dersler)
+
+Seçenek B: Backend API'leri Tamamla
+Profile, Courses, Matches, Notifications route'larını yazalım
+
+Seçenek C: Flutter Entegrasyonu
+Mevcut backend'i Flutter'a bağlayalım (API service + screens)
+
+
+1. ✅ Schools verisi ekle (100+ üniversite)
+2. ✅ Courses verisi ekle (popüler dersler)
+3. 🔨 User Profile Routes (PATCH /api/users/me)
+4. 🔨 Course Routes (GET/POST /api/courses)
+5. 🔨 Match Algorithm (/api/matches/find)
+6. 🔨 File upload sistemi (multer + S3/local)7. 🔨 WebSocket entegrasyonu (Socket.io)
+8. 🔨 Notifications API
+9. 🔨 Groups API
+10. 🔨 Flutter API service katmanı
+11. 🔨 Chat UI + real-time
+12. 🔨 Profile screens13. 🔨 Match algoritması iyileştirme
+14. 🔨 Push notifications (FCM)
+15. 🔨 Image compression & CDN
+16. 🔨 Search & filters
+17. 🔨 Analytics
+18. 🔨 Admin panel19. 🔨 Testing
+20. 🔨 Performance optimization
+21. 🔨 Security audit
+22. 🔨 CI/CD pipeline
+23. 🔨 Production deployment
+Eklenecekler:
+- cover_image_url (kapak fotoğrafı)
+- university_email (üniversite maili doğrulaması)
+- graduation_year (mezuniyet yılı)
+- enrollment_year (kayıt yılı)
+- study_level (önlisans/lisans/yüksek lisans)
+- is_premium (premium üyelik)
+- premium_expires_at (premium bitiş tarihi)
+- last_seen_at (son görülme)
+- is_online (çevrimiçi mi)
+- fcm_token (push notification token)
+- language (dil tercihi)
+- timezone (saat dilimi)- user_id (FK)
+- about_me (hakkımda - uzun metin)
+- interests (ilgi alanları - JSON/Array)
+- hobbies (hobiler - JSON/Array)
+- skills (yetenekler - JSON/Array)
+- social_links (sosyal medya - JSON)
+- website (kişisel web sitesi)
+- location (konum)
+- blood_type (kan grubu)
+- hometown (memleket)- user_id (FK)
+- privacy_profile (kimler profilimi görebilir: everyone/friends/none)
+- privacy_courses (kimler derslerimi görebilir)
+- privacy_phone (telefon gizliliği)
+- privacy_email (email gizliliği)
+- notification_match (eşleşme bildirimleri)
+- notification_message (mesaj bildirimleri)
+- notification_comment (yorum bildirimleri)
+- notification_email (email bildirimleri)
+- notification_push (push bildirimleri)
+- theme_mode (light/dark/system)
+- language_preference- id
+- user_id (FK)
+- badge_type (top_student, helpful, active, verified, etc.)
+- badge_name
+- badge_description
+- badge_icon_url
+- earned_at
+- is_visible- user_id (FK)
+- total_matches (toplam eşleşme)
+- total_courses (toplam ders)
+- total_study_groups (toplam grup)
+- total_messages_sent
+- profile_views (profil görüntülenme)
+- helpful_count (faydalı oyu)
+- rating_average (ortalama puan)
+- streak_days (günlük ardışık giriş)
+- updated_atEklenecekler:
+- logo_url (okul logosu)
+- website
+- address
+- phone
+- email
+- description
+- student_count (öğrenci sayısı)
+- ranking (sıralama)
+- established_year
+- latitude
+- longitudeEklenecekler:
+- school_id (FK) - Hangi üniversiteye ait
+- description
+- degree_type (associate, bachelor, master, phd)
+- duration_years
+- language (TR/EN)
+- is_activeEklenecekler:
+- instructor_name (hoca adı)
+- description (ders açıklaması)
+- is_mandatory (zorunlu mu?)
+- language (ders dili)
+- prerequisites (ön koşul dersler - JSON)- id
+- user_id (FK)
+- course_id (FK)
+- semester (hangi dönem)
+- year (hangi yıl)
+- grade (aldığı not - opsiyonel)
+- status (taking, completed, dropped)
+- added_at
+- completed_at- id
+- course_id (FK)
+- section_number (şube numarası)
+- instructor_name
+- schedule (ders programı - JSON)
+- classroom
+- capacity
+- enrolled_count- id
+- course_id (FK)
+- uploaded_by (user_id FK)
+- title
+- description
+- file_type (pdf, doc, video, link)
+- file_url
+- file_size
+- download_count
+- is_approved (moderatör onayı)
+- uploaded_atEklenecekler:
+- matching_algorithm_version (hangi algoritma versiyonu)
+- matched_courses (ortak dersler - JSON)
+- compatibility_score (0-100 arası uyumluluk)
+- common_interests (ortak ilgi alanları - JSON)
+- match_reason (eşleşme sebebi)
+- expires_at (eşleşme süresi)
+- viewed_by_user1 (görüldü mü)
+- viewed_by_user2
+- user1_feedback (beğendi mi?)
+- user2_feedback- user_id (FK)
+- prefer_same_gender (aynı cinsiyet tercihi)
+- prefer_same_city
+- prefer_same_year
+- min_compatibility_score (minimum uyumluluk)
+- max_distance_km (maksimum mesafe)
+- match_types (course_based, hobby_based, location_based - JSON)
+- is_active- id
+- match_id (FK)
+- action_type (viewed, accepted, rejected, expired)
+- actor_user_id (kim yaptı)
+- action_at
+- reason (red nedeni - opsiyonel)Eklenecekler:
+- conversation_type (direct, group)
+- is_archived (arşivlendi mi)
+- is_pinned (sabitledi mi)
+- muted_by (sessiz yapanlar - JSON)Eklenecekler:
+- reply_to_message_id (hangi mesaja yanıt)
+- file_url (dosya ekleri)
+- file_name
+- file_size
+- thumbnail_url (görsel önizleme)
+- is_edited (düzenlendi mi)
+- edited_at
+- deleted_at (soft delete)
+- deleted_by
+- reactions (reaksiyonlar - JSON: {user_id: emoji})- id
+- message_id (FK)
+- attachment_type (image, video, audio, document)
+- file_url
+- file_name
+- file_size
+- thumbnail_url
+- duration (video/audio için)
+- uploaded_at- conversation_id (FK)
+- user_id (FK)
+- role (admin, member)
+- joined_at
+- left_at
+- is_muted
+- last_read_message_id- id
+- name
+- description
+- created_by (user_id FK)
+- course_id (FK - hangi ders için)
+- group_type (public, private, course_specific)
+- max_members
+- current_members_count
+- cover_image_url
+- meeting_link (zoom/teams link)
+- meeting_schedule (JSON)
+- is_active
+- created_at
+- updated_at- id
+- group_id (FK)
+- user_id (FK)
+- role (admin, moderator, member)
+- joined_at
+- left_at
+- invitation_status (invited, accepted, rejected)
+- invited_by (user_id FK)- id
+- group_id (FK)
+- user_id (FK)
+- content (metin)
+- post_type (text, poll, event, file)
+- attachments (JSON)
+- like_count
+- comment_count
+- is_pinned
+- created_at
+- updated_at- id
+- group_id (FK)
+- created_by (user_id FK)
+- title
+- description
+- event_date
+- event_time
+- location
+- meeting_link
+- max_participants
+- rsvp_count (katılımcı sayısı)
+- created_atEklenecekler:
+- sender_id (user_id FK - kimin gönderdiği)
+- action_type (match, message, comment, like, mention)
+- target_type (user, group, post, course)
+- target_id (hedef ID)
+- data (ekstra bilgi - JSON)
+- image_url (bildirim görseli)
+- deep_link (uygulama içi link)
+- read_at (okunma zamanı)
+- clicked_at (tıklanma zamanı)
+- expires_at (bildirim süresi)- user_id (FK)
+- notification_type
+- is_enabled
+- delivery_method (push, email, sms, in_app)- id
+- user_id (FK)
+- connected_user_id (FK)
+- connection_type (friend, follow, blocked)
+- status (pending, accepted, rejected)
+- created_at
+- accepted_at- id
+- reviewer_id (user_id FK - değerlendiren)
+- reviewed_user_id (user_id FK - değerlendirilen)
+- rating (1-5)
+- review_type (study_partner, helpful, friendly)
+- comment
+- is_anonymous
+- created_at- id
+- reporter_id (user_id FK)
+- reported_user_id (user_id FK)
+- reported_content_id (mesaj/post ID)
+- report_type (spam, harassment, inappropriate)
+- reason
+- status (pending, reviewed, resolved)
+- reviewed_by (admin user_id)
+- created_at
+- resolved_at- id
+- blocker_id (user_id FK)
+- blocked_user_id (user_id FK)
+- reason
+- blocked_at- id
+- user_id (FK)
+- content
+- post_type (text, poll, question, announcement)
+- visibility (public, friends, private)
+- tags (JSON)
+- like_count
+- comment_count
+- share_count
+- view_count
+- is_pinned
+- created_at
+- updated_at- id
+- post_id (FK)
+- user_id (FK)
+- parent_comment_id (FK - yanıt için)
+- content
+- like_count
+- is_edited
+- created_at
+- updated_at- id
+- user_id (FK)
+- target_type (post, comment, message)
+- target_id
+- created_at- id
+- user_id (FK)
+- search_query
+- search_type (user, course, group)
+- result_count
+- searched_at- id
+- user_id (FK)
+- interest_category (sport, music, tech, etc.)
+- interest_name
+- proficiency_level (beginner, intermediate, expert)- id
+- admin_id (user_id FK)
+- action_type (ban, warn, delete_content)
+- target_type (user, post, group)
+- target_id
+- reason
+- duration (ban süresi)
+- created_at- id
+- log_level (info, warning, error)
+- event_type
+- user_id (FK - opsiyonel)
+- message
+- metadata (JSON)
+- created_at- id
+- user_id (FK)
+- activity_type (login, logout, profile_view, match_view)
+- metadata (JSON)
+- ip_address
+- user_agent
+- created_at- id
+- metric_type (active_users, matches_today, messages_today)
+- metric_value
+- date
+- created_at

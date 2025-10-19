@@ -4,6 +4,20 @@
 
 set -e
 
+# Kurulum durumu kontrol dosyası
+SETUP_MARKER="/root/.unicampus-setup-completed"
+
+# Eğer kurulum daha önce yapılmışsa, uyarı ver ve çık
+if [ -f "$SETUP_MARKER" ]; then
+    echo "⚠️  UYARI: Sunucu zaten kurulmuş!"
+    echo "📅 Kurulum tarihi: $(cat $SETUP_MARKER)"
+    echo "🚫 Tekrar kurulum yapılmasını önlemek için script sonlandırılıyor."
+    echo ""
+    echo "💡 Eğer kurulumu sıfırlamak istiyorsanız, şu komutu çalıştırın:"
+    echo "   sudo rm $SETUP_MARKER"
+    exit 0
+fi
+
 echo "🚀 UniCampus API Server Setup Starting..."
 
 # Update system
@@ -86,6 +100,10 @@ echo "🔄 Setting up PM2 startup..."
 sudo -u unicampus pm2 startup systemd -u unicampus --hp /home/unicampus
 # Note: Run the command that PM2 outputs
 
+# Kurulum tamamlandı işareti oluştur
+echo "$(date)" > $SETUP_MARKER
+chmod 600 $SETUP_MARKER
+
 echo "✅ Setup complete!"
 echo ""
 echo "📋 Next steps:"
@@ -97,3 +115,5 @@ echo "5. Setup SSL: certbot --nginx -d api.kafadarkampus.online"
 echo ""
 echo "🌍 Server IP: $(curl -s ifconfig.me)"
 echo "📧 Point your domain A records to this IP"
+echo ""
+echo "🔒 Kurulum tamamlandı işareti oluşturuldu: $SETUP_MARKER"

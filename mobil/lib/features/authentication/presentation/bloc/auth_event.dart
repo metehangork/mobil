@@ -55,5 +55,10 @@ class AuthUpdateProfileEvent extends AuthEvent {
 }
 
 class AuthResendCodeEvent extends AuthEvent {
-  const AuthResendCodeEvent();
+  final String email;
+
+  const AuthResendCodeEvent({required this.email});
+
+  @override
+  List<Object?> get props => [email];
 }

@@ -22,6 +22,9 @@ class AppConfig {
     // 2. Production: Gerçek sunucu URL'i kullan
     return productionApiBaseUrl;
   }
+
+  // Kısa isim (courses_service için)
+  static String get apiBaseUrl => effectiveApiBaseUrl;
   
   // Development server IP'lerini döndür (fallback için kullanılabilir)
   static List<String> get developmentServerIPs => _developmentServerIPs;
