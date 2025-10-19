@@ -6,7 +6,6 @@ require('dotenv').config();
 const { query } = require('./src/db/pool');
 
 const authRoutes = require('./src/routes/auth');
-const emailRoutes = require('./src/routes/emailRoutes');
 const schoolsRoutes = require('./src/routes/schools');
 const departmentsRoutes = require('./src/routes/departments');
 const chatsRoutes = require('./src/routes/chats');
@@ -14,6 +13,9 @@ const chatsRoutes = require('./src/routes/chats');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+
+// Trust proxy (Nginx reverse proxy için gerekli)
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(helmet());
@@ -32,7 +34,13 @@ if (process.env.DEBUG_CORS === '1') {
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 dakika
   max: 100, // maksimum 100 request
-  message: 'Çok fazla istek gönderildi, lütfen daha sonra tekrar deneyin.'
+  message: 'Çok fazla istek gönderildi, lütfen daha sonra tekrar deneyin.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Nginx proxy arkasında gerçek IP'yi al
+  keyGenerator: (req) => {
+    return req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  }
 });
 app.use(limiter);
 
@@ -41,7 +49,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/email', emailRoutes);
 app.use('/api/schools', schoolsRoutes);
 app.use('/api/departments', departmentsRoutes);
 app.use('/api/chats', chatsRoutes);

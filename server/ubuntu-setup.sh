@@ -51,12 +51,7 @@ echo "📁 Creating project structure..."
 mkdir -p /home/unicampus/api
 chown -R unicampus:unicampus /home/unicampus
 
-# Configure Nginx (basic)
-echo "🌐 Configuring Nginx..."
-cat > /etc/nginx/sites-available/unicampus <<EOF
-server {
-    listen 80;
-    server_name api.kafadarkampus.online kafadarkampus.online;
+
     
     location / {
         proxy_pass http://localhost:3000;

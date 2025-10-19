@@ -1,7 +1,7 @@
 import 'dart:io';
 
 class AppConfig {
-  // Production API URL
+  // Production API URL  
   static const String productionApiBaseUrl = 'https://kafadarkampus.online/api';
   
   // Development/Test sunucu IP'leri
