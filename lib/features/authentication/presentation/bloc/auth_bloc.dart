@@ -1,14 +1,12 @@
 import 'dart:convert';
 import 'dart:async';
-import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 import '../../../../core/models/user_model.dart';
-import '../../../../core/config/app_config.dart';
+import '../../../../core/services/service_locator.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -16,7 +14,6 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
-  static String get _baseUrl => AppConfig.effectiveApiBaseUrl;
 
   AuthBloc() : super(AuthInitial()) {
     on<AuthLoginEvent>(_onLogin);
@@ -26,10 +23,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthVerifyEmailEvent>(_onVerifyEmail);
     on<AuthResendCodeEvent>(_onResendCode);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
-    _checkInitialAuthStatus();
+    // Initial auth check
+    add(const AuthCheckStatus());
   }
 
-  Future<void> _checkInitialAuthStatus() async {
+  Future<void> _onCheckStatus(
+    AuthCheckStatus event,
+    Emitter<AuthState> emit,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(_tokenKey);
@@ -47,8 +48,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             user = UserModel(
               id: (decoded['id'] ?? '0').toString(),
               email: decoded['email'] ?? '',
-              name: (decoded['firstName'] != null || decoded['lastName'] != null)
-                  ? '${decoded['firstName'] ?? ''} ${decoded['lastName'] ?? ''}'.trim()
+              name: (decoded['firstName'] != null ||
+                      decoded['lastName'] != null)
+                  ? '${decoded['firstName'] ?? ''} ${decoded['lastName'] ?? ''}'
+                      .trim()
                   : (decoded['name'] ?? ''),
               university: decoded['university'] ?? 'Bilinmiyor',
               department: decoded['department'] ?? 'Bilinmiyor',
@@ -59,9 +62,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               avatarUrl: decoded['avatarUrl']?.toString(),
               isVerified: decoded['isVerified'] ?? true,
               courses: (decoded['courses'] is List)
-                  ? (decoded['courses'] as List).map((e) => e.toString()).toList()
+                  ? (decoded['courses'] as List)
+                      .map((e) => e.toString())
+                      .toList()
                   : <String>[],
-              createdAt: DateTime.tryParse(decoded['createdAt'].toString()) ?? DateTime.now(),
+              createdAt: DateTime.tryParse(decoded['createdAt'].toString()) ??
+                  DateTime.now(),
             );
           } else {
             debugPrint('⚠️ AUTH BLOC: Stored user is not a Map, resetting.');
@@ -84,33 +90,33 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onLogin(AuthLoginEvent event, Emitter<AuthState> emit) async {
     debugPrint('🔥 AUTH BLOC: _onLogin called with email: ${event.email}');
     emit(AuthLoading());
+
     try {
-      // TODO: Gerçek login API entegrasyonu
-      await Future.delayed(const Duration(milliseconds: 800));
-      debugPrint('✅ AUTH BLOC: Mock login successful (replace with real API)');
-      final user = UserModel(
-        id: 'local-login',
-        email: event.email,
-        name: event.email.split('@').first,
-        university: 'Bilinmiyor',
-        department: 'Bilinmiyor',
-        classYear: 1,
-        isVerified: true,
-        courses: const [],
-        createdAt: DateTime.now(),
-      );
-      const token = 'mock_login_token';
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, token);
-      await prefs.setString(_userKey, json.encode(user.toJson()));
-      emit(AuthAuthenticated(user: user, token: token));
+      // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
+      final authService = ServiceLocator.auth;
+
+      // Email ile verification code iste
+      debugPrint(
+          '📧 AUTH BLOC: Requesting verification code for ${event.email}');
+      final codeResponse =
+          await authService.requestVerificationCode(event.email);
+
+      if (!codeResponse.isSuccess) {
+        emit(AuthError(message: codeResponse.message ?? 'Email gönderilemedi'));
+        return;
+      }
+
+      // Kullanıcı verification code'u girmeli - şimdilik email verification sayfasına yönlendir
+      // NOT: Login için şifre yerine email verification kullanıyoruz
+      emit(AuthError(message: 'Lütfen email adresinize gelen kodu girin'));
     } catch (e) {
       debugPrint('❌ AUTH BLOC: Login error: ${e.toString()}');
       emit(AuthError(message: 'Giriş sırasında hata oluştu: ${e.toString()}'));
     }
   }
 
-  Future<void> _onLogoutRequested(AuthLogoutRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogoutRequested(
+      AuthLogoutRequested event, Emitter<AuthState> emit) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_tokenKey);
@@ -121,133 +127,107 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onCheckStatus(AuthCheckStatus event, Emitter<AuthState> emit) async {
-    emit(AuthUnauthenticated());
-  }
-
-  Future<void> _onRegisterRequested(AuthRegisterEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onRegisterRequested(
+      AuthRegisterEvent event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
+
     try {
-      final started = DateTime.now();
-      debugPrint('🔄 AUTH BLOC: Starting registration for ${event.email} -> POST /api/auth/request-verification');
-      debugPrint('🌐 AUTH BLOC: Using API URL: $_baseUrl');
-      final uri = Uri.parse('$_baseUrl/auth/request-verification');
-      http.Response response;
-      try {
-        response = await http
-            .post(
-              uri,
-              headers: const {'Content-Type': 'application/json'},
-              body: json.encode({
-                'email': event.email,
-                'firstName': event.firstName,
-                'lastName': event.lastName,
-                'university': event.university,
-              }),
-            )
-            .timeout(const Duration(seconds: 12));
-      } on TimeoutException {
-        debugPrint('⏱️ AUTH BLOC: Registration request timeout');
-        emit(const AuthError(message: 'Sunucu yanıt vermedi (timeout).'));
-        return;
-      } on SocketException catch (se) {
-        debugPrint('🌐 AUTH BLOC: Network error (SocketException): $se');
-        emit(const AuthError(message: 'Ağ hatası: Sunucuya ulaşılamadı'));
-        return;
-      }
+      debugPrint('🔄 AUTH BLOC: Starting registration for ${event.email}');
 
-      final elapsedMs = DateTime.now().difference(started).inMilliseconds;
-      debugPrint('🔄 AUTH BLOC: Registration response (${response.statusCode}) in ${elapsedMs}ms');
-      String bodyPreview = response.body.length > 400 ? response.body.substring(0, 400) + '…(truncated)' : response.body;
-      debugPrint('🧪 AUTH BLOC: Response body preview: $bodyPreview');
+      // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
+      final authService = ServiceLocator.auth;
 
-      if (response.statusCode == 200) {
+      // Email verification code iste
+      final response = await authService.requestVerificationCode(event.email);
+
+      if (response.isSuccess) {
         emit(AuthRegistrationSuccess(email: event.email));
-        debugPrint('✅ AUTH BLOC: Registration success -> navigating to verify screen');
+        debugPrint(
+            '✅ AUTH BLOC: Registration success -> navigating to verify screen');
       } else {
-        String message = _extractErrorMessage(response.body) ?? 'Kayıt sırasında hata (HTTP ${response.statusCode})';
+        String message = response.message ?? 'Kayıt sırasında hata oluştu';
         emit(AuthError(message: message));
-        debugPrint('❌ AUTH BLOC: Registration failed message: $message');
+        debugPrint('❌ AUTH BLOC: Registration failed: $message');
       }
     } catch (e, st) {
       debugPrint('💥 AUTH BLOC: Registration unexpected error: $e');
       debugPrint(st.toString());
-      emit(const AuthError(message: 'Beklenmeyen hata oluştu'));
+      emit(AuthError(message: 'Beklenmeyen hata oluştu: ${e.toString()}'));
     }
   }
 
-  Future<void> _onVerifyEmail(AuthVerifyEmailEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onVerifyEmail(
+      AuthVerifyEmailEvent event, Emitter<AuthState> emit) async {
     if (state is AuthLoading) {
-      debugPrint('⚠️ AUTH BLOC: Already loading, ignoring duplicate verify request');
+      debugPrint(
+          '⚠️ AUTH BLOC: Already loading, ignoring duplicate verify request');
       return;
     }
+
     emit(AuthLoading());
+
     try {
-      final started = DateTime.now();
-      debugPrint('🔄 AUTH BLOC: Verifying code for ${event.email} -> POST /api/auth/verify-code');
-      debugPrint('🌐 AUTH BLOC: Using API URL: $_baseUrl');
-      final uri = Uri.parse('$_baseUrl/auth/verify-code');
-      http.Response response;
-      try {
-        response = await http
-            .post(
-              uri,
-              headers: const {'Content-Type': 'application/json'},
-              body: json.encode({'email': event.email, 'code': event.code}),
-            )
-            .timeout(const Duration(seconds: 12));
-      } on TimeoutException {
-        debugPrint('⏱️ AUTH BLOC: Verification timeout');
-        emit(const AuthError(message: 'Sunucu yanıt vermedi. Lütfen tekrar deneyin.'));
-        return;
-      } on SocketException catch (se) {
-        debugPrint('🌐 AUTH BLOC: Verify network error: $se');
-        emit(const AuthError(message: 'Ağ hatası: Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.'));
-        return;
-      }
+      debugPrint('🔄 AUTH BLOC: Verifying code for ${event.email}');
 
-      final elapsedMs = DateTime.now().difference(started).inMilliseconds;
-      debugPrint('🔄 AUTH BLOC: Verify response (${response.statusCode}) in ${elapsedMs}ms');
-      String bodyPreview = response.body.length > 400 ? response.body.substring(0, 400) + '…(truncated)' : response.body;
-      debugPrint('🧪 AUTH BLOC: Verify body preview: $bodyPreview');
+      // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
+      final authService = ServiceLocator.auth;
+      final userService = ServiceLocator.user;
 
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        debugPrint('📦 AUTH BLOC: Response data keys: ${responseData.keys}');
-        
-        final userData = responseData['user'];
-        final token = responseData['token'];
-        
-        if (userData == null || token == null) {
-          debugPrint('❌ AUTH BLOC: Missing user data or token in response');
-          emit(const AuthError(message: 'Sunucu yanıtı eksik. Lütfen tekrar deneyin.'));
+      // Kodu doğrula
+      final response = await authService.verifyCode(event.email, event.code);
+
+      if (response.isSuccess) {
+        debugPrint('✅ AUTH BLOC: Verification successful');
+
+        // Token otomatik olarak AuthService tarafından kaydedildi
+        final token = await authService.getToken();
+
+        if (token == null) {
+          emit(const AuthError(message: 'Token kaydedilemedi'));
           return;
         }
-        
+
+        // Kullanıcı profilini çek
+        final profileResponse = await userService.getMyProfile();
+
+        if (!profileResponse.isSuccess) {
+          emit(AuthError(
+              message:
+                  profileResponse.message ?? 'Profil bilgileri alınamadı'));
+          return;
+        }
+
+        // UserModel oluştur
+        final userData = profileResponse.data!;
         final user = UserModel(
           id: userData['id'].toString(),
-          email: userData['email'],
-          name: '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim(),
-          university: userData['university'] ?? 'Bilinmiyor',
-          department: userData['department'] ?? 'Bilinmiyor',
-          classYear: userData['classYear'] ?? 1,
-          isVerified: userData['isVerified'] ?? true,
+          email: userData['email'] ?? event.email,
+          name: userData['full_name'] ?? 'Kullanıcı',
+          university: userData['school_name'] ?? 'Bilinmiyor',
+          department: userData['department_name'] ?? 'Bilinmiyor',
+          classYear: userData['study_level'] ?? 1,
+          isVerified: userData['is_verified'] ?? true,
           courses: [],
-          createdAt: DateTime.now(),
+          createdAt:
+              DateTime.tryParse(userData['created_at'] ?? '') ?? DateTime.now(),
+          bio: userData['bio'],
+          hobbies: (userData['interests'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [],
         );
-        
+
+        // SharedPreferences'a kaydet
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_tokenKey, token);
         await prefs.setString(_userKey, json.encode(user.toJson()));
-        
-        debugPrint('✅ AUTH BLOC: Verification success -> user authenticated');
-        debugPrint('👤 AUTH BLOC: User: ${user.name} (${user.email})');
-        
+
+        debugPrint('✅ AUTH BLOC: User authenticated: ${user.name}');
         emit(AuthAuthenticated(user: user, token: token));
       } else {
-        String message = _extractErrorMessage(response.body) ?? 'Doğrulama kodu hatalı veya süresi dolmuş (HTTP ${response.statusCode})';
+        String message = response.message ?? 'Doğrulama kodu hatalı';
         emit(AuthError(message: message));
-        debugPrint('❌ AUTH BLOC: Verification failed message: $message');
+        debugPrint('❌ AUTH BLOC: Verification failed: $message');
       }
     } catch (e, st) {
       debugPrint('💥 AUTH BLOC: Verification unexpected error: $e');
@@ -256,59 +236,64 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onUpdateProfile(AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {
+  Future<void> _onResendCode(
+      AuthResendCodeEvent event, Emitter<AuthState> emit) async {
+    try {
+      debugPrint('� AUTH BLOC: Resending verification code for ${event.email}');
+
+      // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
+      final authService = ServiceLocator.auth;
+
+      final response = await authService.requestVerificationCode(event.email);
+
+      if (response.isSuccess) {
+        debugPrint('✅ AUTH BLOC: Verification code resent successfully');
+        // State değiştirmiyoruz, sadece başarılı olduğunu log'luyoruz
+        // UI'da SnackBar ile bilgi verilebilir
+      } else {
+        debugPrint('❌ AUTH BLOC: Failed to resend code: ${response.message}');
+        emit(AuthError(message: response.message ?? 'Kod gönderilemedi'));
+      }
+    } catch (e) {
+      debugPrint('💥 AUTH BLOC: Resend code error: $e');
+      emit(AuthError(message: 'Kod gönderirken hata oluştu: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onUpdateProfile(
+      AuthUpdateProfileEvent event, Emitter<AuthState> emit) async {
     if (state is AuthAuthenticated) {
       final currentState = state as AuthAuthenticated;
-      // Burada normalde API'ye bir istek gönderilir.
-      // Şimdilik sadece state'i güncelleyip local'de kalıcı hale getirelim.
+
       try {
-        emit(AuthLoading()); // Arayüzde yükleniyor durumu göster
-        await Future.delayed(const Duration(milliseconds: 500)); // Mock network delay
+        emit(AuthLoading());
 
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_userKey, json.encode(event.updatedUser.toJson()));
+        // GERÇEK API KULLANIMI - ServiceLocator üzerinden UserService
+        final userService = ServiceLocator.user;
 
-        // State'i yeni kullanıcı bilgileriyle güncelle
-        emit(AuthAuthenticated(user: event.updatedUser, token: currentState.token));
-        debugPrint('✅ AUTH BLOC: Profile updated successfully.');
+        // Profili güncelle
+        final response = await userService.updateProfile({
+          'full_name': event.updatedUser.name,
+          // Diğer alanlar da eklenebilir
+        });
+
+        if (response.isSuccess) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(
+              _userKey, json.encode(event.updatedUser.toJson()));
+
+          emit(AuthAuthenticated(
+              user: event.updatedUser, token: currentState.token));
+          debugPrint('✅ AUTH BLOC: Profile updated successfully.');
+        } else {
+          emit(currentState);
+          emit(AuthError(message: response.message ?? 'Profil güncellenemedi'));
+        }
       } catch (e) {
         debugPrint('❌ AUTH BLOC: Profile update failed: $e');
-        // Hata durumunda eski state'e geri dön
         emit(currentState);
-        emit(const AuthError(message: 'Profil güncellenirken bir hata oluştu.'));
+        emit(AuthError(message: 'Profil güncellenirken bir hata oluştu.'));
       }
-    }
-  }
-
-  // Attempts to extract a meaningful error string from various backend shapes
-  String? _extractErrorMessage(String raw) {
-    try {
-      final data = json.decode(raw);
-      if (data is Map) {
-        if (data['message'] is String) return data['message'];
-        if (data['error'] is String) return data['error'];
-        if (data['errors'] is List && data['errors'].isNotEmpty) {
-          final first = data['errors'].first;
-          if (first is Map) {
-            return (first['msg'] ?? first['message'] ?? first['error'])?.toString();
-          } else {
-            return first.toString();
-          }
-        }
-      }
-    } catch (_) {
-      return null; // raw body not JSON or parse failed
-    }
-    return null;
-  }
-
-  Future<void> _onResendCode(AuthResendCodeEvent event, Emitter<AuthState> emit) async {
-    emit(AuthLoading());
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-      emit(AuthInitial());
-    } catch (e) {
-      emit(AuthError(message: 'Kod gönderilemedi: ${e.toString()}'));
     }
   }
 }

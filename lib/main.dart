@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
+import 'core/services/service_locator.dart';
 import 'features/authentication/presentation/bloc/auth_bloc.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize all API services
+  await ServiceLocator.initialize();
+  
   runApp(const UniCampusApp());
 }
 
