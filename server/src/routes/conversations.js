@@ -21,6 +21,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+
 // ==================== KONUŞMA LİSTESİ ====================
 
 /**

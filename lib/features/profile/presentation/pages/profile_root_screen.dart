@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../authentication/presentation/bloc/auth_bloc.dart';
 import '../bloc/profile_bloc.dart';
 import '../../../../core/models/user_model.dart';
+import '../../../messages/presentation/pages/debug_api_test_page.dart';
 
 /// Profile tab root screen - GERÇEK API ENTEGRASYONU
 class ProfileRootScreen extends StatefulWidget {
@@ -46,6 +47,11 @@ class _ProfileRootScreenState extends State<ProfileRootScreen>
                   appBar: AppBar(
                     title: Text(authUser?.name ?? 'Profil'),
                     actions: [
+                      IconButton(
+                        icon: const Icon(Icons.bug_report, color: Colors.red),
+                        tooltip: 'API Debug Test',
+                        onPressed: () => _showDebugTestPage(context),
+                      ),
                       IconButton(
                         icon: const Icon(Icons.notifications_outlined),
                         tooltip: 'Bildirimler',
@@ -324,7 +330,7 @@ class _ProfileRootScreenState extends State<ProfileRootScreen>
                     icon: const Icon(Icons.close),
                     onPressed: () {
                       // Dersi kaldır
-                      // TODO: CourseService ile unenroll
+                      // CourseService ile unenroll işlemi yapılacak
                     },
                   ),
                 ),
@@ -400,7 +406,7 @@ class _ProfileRootScreenState extends State<ProfileRootScreen>
                 title: const Text('Gizlilik Politikası'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // TODO: Gizlilik politikası sayfası
+                  // Gizlilik politikası sayfası açılacak
                 },
               ),
               const Divider(height: 1),
@@ -409,7 +415,7 @@ class _ProfileRootScreenState extends State<ProfileRootScreen>
                 title: const Text('Kullanım Koşulları'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  // TODO: Kullanım koşulları sayfası
+                  // Kullanım koşulları sayfası açılacak
                 },
               ),
               const Divider(height: 1),
@@ -452,6 +458,14 @@ class _ProfileRootScreenState extends State<ProfileRootScreen>
             child: const Text('Çıkış Yap'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showDebugTestPage(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const DebugApiTestPage(),
       ),
     );
   }

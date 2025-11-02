@@ -28,15 +28,27 @@ class AuthRegisterEvent extends AuthEvent {
   final String firstName;
   final String lastName;
   final String university;
+  final int? schoolId;
+  final int? departmentId;
   const AuthRegisterEvent({
     required this.email,
     required this.password,
     required this.firstName,
     required this.lastName,
     required this.university,
+    this.schoolId,
+    this.departmentId,
   });
   @override
-  List<Object?> get props => [email, password, firstName, lastName, university];
+  List<Object?> get props => [
+        email,
+        password,
+        firstName,
+        lastName,
+        university,
+        schoolId,
+        departmentId
+      ];
 }
 
 class AuthVerifyEmailEvent extends AuthEvent {
@@ -59,6 +71,13 @@ class AuthResendCodeEvent extends AuthEvent {
 
   const AuthResendCodeEvent({required this.email});
 
+  @override
+  List<Object?> get props => [email];
+}
+
+class RequestPasswordReset extends AuthEvent {
+  final String email;
+  const RequestPasswordReset({required this.email});
   @override
   List<Object?> get props => [email];
 }

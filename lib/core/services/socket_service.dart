@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
 /// Socket.io ile anlık mesajlaşma servisi
 /// Singleton pattern kullanılarak tek instance oluşturulur
@@ -9,7 +9,7 @@ class SocketService {
   factory SocketService() => _instance;
   SocketService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
   bool _isConnected = false;
 
   // Stream controllers - UI'ye event göndermek için
@@ -26,50 +26,105 @@ class SocketService {
   bool get isConnected => _isConnected;
 
   /// Socket.io bağlantısını başlat
-  /// 
+  ///
   /// [serverUrl] - Backend sunucu adresi (örn: 'http://192.168.1.5:3000')
-  /// [userId] - Bağlanan kullanıcının ID'si
-  void connect(String serverUrl, String userId) {
-    if (_isConnected && _socket != null) {
-      developer.log('Zaten bağlı, tekrar bağlanmaya gerek yok', name: 'SocketService');
+  /// [token] - JWT authentication token (GÜVENLİK!)
+  void connect(String serverUrl, String token) {
+    // developer.log çalışmıyorsa print ile debug
+    print('🔌 [SocketService] connect() çağrıldı - serverUrl: $serverUrl');
+    print(
+        '🔌 [SocketService] Durum - _isConnected: $_isConnected, _socket null mu: ${_socket == null}, socket.connected: ${_socket?.connected}');
+
+    // Eğer socket aktifse ve gerçekten bağlıysa, tekrar bağlanmaya gerek yok
+    if (_socket != null && _socket!.connected) {
+      print('✅ [SocketService] Socket zaten aktif ve bağlı, return');
+      developer.log('✅ Zaten bağlı ve aktif, tekrar bağlanmaya gerek yok',
+          name: 'SocketService');
       return;
     }
 
-    developer.log('Socket.io bağlantısı başlatılıyor: $serverUrl', name: 'SocketService');
+    // _isConnected flag'i socket.connected ile senkronize et
+    if (_socket != null && !_socket!.connected) {
+      print('⚠️ [SocketService] Socket var ama bağlı değil, dispose ediliyor');
+      _isConnected = false; // Flag'i güncelle
+      _connectionController.add(false);
+    }
 
-    _socket = IO.io(
+    // Eğer eski bir socket varsa (bağlı olmasa bile), önce dispose et
+    if (_socket != null) {
+      print('⚠️ [SocketService] Eski socket dispose ediliyor');
+      developer.log('⚠️ Eski socket dispose ediliyor', name: 'SocketService');
+      _socket!.dispose();
+      _socket = null;
+    }
+
+    print('🔌 [SocketService] Yeni socket oluşturuluyor...');
+    developer.log('🔌 Socket.io bağlantısı başlatılıyor: $serverUrl',
+        name: 'SocketService');
+
+    _socket = io.io(
       serverUrl,
-      IO.OptionBuilder()
+      io.OptionBuilder()
           .setTransports(['websocket']) // Sadece websocket kullan
           .disableAutoConnect() // Otomatik bağlanma kapalı
           .enableReconnection() // Bağlantı kopunca yeniden dene
-          .setReconnectionAttempts(5) // 5 deneme
-          .setReconnectionDelay(2000) // 2 saniye bekle
+          .setReconnectionAttempts(999999) // Unlimited reconnection
+          .setReconnectionDelay(100) // 100ms bekle (ÇOK HIZLI!)
+          .setReconnectionDelayMax(2000) // Maksimum 2 saniye
+          .setRandomizationFactor(0.2) // Az randomization
+          .setTimeout(10000) // Connection timeout 10 saniye
+          .setAuth({'token': token}) // 🔐 JWT TOKEN GÖNDERİMİ
           .build(),
     );
 
     // ==================== BAĞLANTI OLAYLARI ====================
-    
+
     _socket!.onConnect((_) {
       _isConnected = true;
       _connectionController.add(true);
-      developer.log('✅ Socket.io bağlandı', name: 'SocketService');
-      
-      // Kullanıcıyı çevrimiçi olarak işaretle
-      _socket!.emit('user_online', {'userId': userId});
+      print('✅ [SocketService] Socket.io BAĞLANDI! (JWT authenticated)');
+      developer.log('✅ Socket.io bağlandı (JWT authenticated)',
+          name: 'SocketService');
+
+      // Artık user_online emit'e gerek yok - JWT ile otomatik!
+      // Backend JWT'den userId alıp otomatik çevrimiçi yapıyor
     });
 
-    _socket!.onDisconnect((_) {
+    _socket!.onDisconnect((reason) {
       _isConnected = false;
       _connectionController.add(false);
-      developer.log('❌ Socket.io bağlantısı koptu', name: 'SocketService');
+      print('❌ [SocketService] Socket.io BAĞLANTI KOPTU - Sebep: $reason');
+      developer.log('❌ Socket.io bağlantısı koptu - Sebep: $reason',
+          name: 'SocketService');
+      // Otomatik reconnect başlayacak (enableReconnection sayesinde)
+    });
+
+    _socket!.on('reconnect_attempt', (attempt) {
+      print('🔄 [SocketService] Yeniden bağlanma denemesi: $attempt');
+      developer.log('🔄 Yeniden bağlanma denemesi: $attempt',
+          name: 'SocketService');
+    });
+
+    _socket!.on('reconnect', (attemptNumber) {
+      print('✅ [SocketService] Yeniden bağlandı! (Deneme: $attemptNumber)');
+      developer.log('✅ Yeniden bağlandı! (Deneme: $attemptNumber)',
+          name: 'SocketService');
+      _isConnected = true;
+      _connectionController.add(true);
+    });
+
+    _socket!.on('reconnect_failed', (_) {
+      print('❌ [SocketService] Yeniden bağlanma başarısız!');
+      developer.log('❌ Yeniden bağlanma başarısız!', name: 'SocketService');
     });
 
     _socket!.onConnectError((data) {
+      print('❌ [SocketService] Bağlantı hatası: $data');
       developer.log('❌ Bağlantı hatası: $data', name: 'SocketService');
     });
 
     _socket!.onError((data) {
+      print('❌ [SocketService] Socket hatası: $data');
       developer.log('❌ Socket hatası: $data', name: 'SocketService');
     });
 
@@ -77,6 +132,7 @@ class SocketService {
 
     // Yeni mesaj geldi
     _socket!.on('new_message', (data) {
+      print('📨 [SocketService] Yeni mesaj geldi: $data');
       developer.log('📨 Yeni mesaj geldi: $data', name: 'SocketService');
       _messageController.add({
         'type': 'new_message',
@@ -86,6 +142,7 @@ class SocketService {
 
     // Mesaj gönderildi onayı
     _socket!.on('message_sent', (data) {
+      print('✅ [SocketService] Mesaj gönderildi: $data');
       developer.log('✅ Mesaj gönderildi: $data', name: 'SocketService');
       _messageController.add({
         'type': 'message_sent',
@@ -136,27 +193,24 @@ class SocketService {
   }
 
   /// Mesaj gönder
-  /// 
-  /// [senderId] - Gönderen kullanıcı ID
-  /// [receiverId] - Alıcı kullanıcı ID
-  /// [content] - Mesaj içeriği
-  /// [conversationId] - Konuşma ID (opsiyonel)
+  ///
+  /// [conversationId] - Konuşma ID (ZORUNLU)
+  /// [text] - Mesaj metni
+  ///
+  /// NOT: senderId JWT token'dan otomatik alınıyor (güvenlik!)
   void sendMessage({
-    required String senderId,
-    required String receiverId,
-    required String content,
-    String? conversationId,
+    required int conversationId,
+    required String text,
   }) {
     if (!_isConnected || _socket == null) {
-      developer.log('❌ Socket bağlı değil, mesaj gönderilemedi', name: 'SocketService');
+      developer.log('❌ Socket bağlı değil, mesaj gönderilemedi',
+          name: 'SocketService');
       return;
     }
 
     final messageData = {
-      'senderId': senderId,
-      'receiverId': receiverId,
-      'content': content,
-      if (conversationId != null) 'conversationId': conversationId,
+      'conversationId': conversationId,
+      'text': text,
     };
 
     _socket!.emit('send_message', messageData);
@@ -164,19 +218,18 @@ class SocketService {
   }
 
   /// Yazıyor bildirimi gönder
-  /// 
-  /// [senderId] - Yazan kullanıcı ID
+  ///
   /// [receiverId] - Alıcı kullanıcı ID
   /// [isTyping] - Yazıyor mu (true) / yazmayı bıraktı mı (false)
+  ///
+  /// NOT: senderId JWT token'dan otomatik alınıyor (güvenlik!)
   void sendTyping({
-    required String senderId,
     required String receiverId,
     required bool isTyping,
   }) {
     if (!_isConnected || _socket == null) return;
 
     _socket!.emit('typing', {
-      'senderId': senderId,
       'receiverId': receiverId,
       'isTyping': isTyping,
     });
@@ -185,25 +238,24 @@ class SocketService {
   }
 
   /// Mesajı okundu olarak işaretle
-  /// 
+  ///
   /// [messageId] - Mesaj ID
-  /// [userId] - Okuyan kullanıcı ID
+  /// NOT: userId JWT token'dan otomatik alınıyor (güvenlik!)
   void markMessageAsRead({
-    required String messageId,
-    required String userId,
+    required int messageId,
   }) {
     if (!_isConnected || _socket == null) return;
 
     _socket!.emit('message_read', {
       'messageId': messageId,
-      'userId': userId,
     });
 
-    developer.log('👁️ Mesaj okundu işareti gönderildi: $messageId', name: 'SocketService');
+    developer.log('👁️ Mesaj okundu işareti gönderildi: $messageId',
+        name: 'SocketService');
   }
 
   /// Konuşma geçmişini al
-  /// 
+  ///
   /// [userId1] - İlk kullanıcı ID
   /// [userId2] - İkinci kullanıcı ID
   /// [limit] - Maksimum mesaj sayısı (varsayılan: 50)
@@ -225,7 +277,8 @@ class SocketService {
 
     // Konuşma verisi geldiğinde messageStream'e düşecek
     _socket!.on('conversation_data', (data) {
-      developer.log('📚 Konuşma geçmişi alındı: ${data['count']} mesaj', name: 'SocketService');
+      developer.log('📚 Konuşma geçmişi alındı: ${data['count']} mesaj',
+          name: 'SocketService');
       _messageController.add({
         'type': 'conversation_history',
         'data': data,
@@ -238,7 +291,7 @@ class SocketService {
   }
 
   /// Belirtilen kullanıcıların çevrimiçi durumunu kontrol et
-  /// 
+  ///
   /// [userIds] - Kontrol edilecek kullanıcı ID listesi
   void getOnlineStatus(List<String> userIds) {
     if (!_isConnected || _socket == null) return;
@@ -255,11 +308,11 @@ class SocketService {
   }
 
   /// Manuel çıkış yap
-  /// 
-  /// [userId] - Çıkış yapan kullanıcı ID
-  void logout(String userId) {
+  ///
+  /// NOT: userId JWT token'dan otomatik alınıyor
+  void logout() {
     if (_socket != null) {
-      _socket!.emit('user_logout', {'userId': userId});
+      _socket!.emit('user_logout', {});
       disconnect();
     }
   }

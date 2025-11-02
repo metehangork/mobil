@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "584061616499",
+    "project_id": "kafadar-kampus",
+    "storage_bucket": "kafadar-kampus.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:584061616499:android:7b0ba511273a0af39c8506",
+        "android_client_info": {
+          "package_name": "com.kafadarkampus.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8UUTS_HIy0ZH8dpT9cWirr7U6CopKjeA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

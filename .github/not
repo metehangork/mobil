@@ -1,3 +1,64 @@
+  SONRAKİ ADIMLAR (Opsiyonel):
+❌ Henüz Oluşturulmamış (Ama Tablolar Var):
+Posts (Gönderiler) - Sosyal medya özellikleri
+
+GET /api/posts - Gönderi listesi
+POST /api/posts - Gönderi oluştur
+GET /api/posts/:id - Gönderi detayı
+DELETE /api/posts/:id - Gönderi sil
+Comments (Yorumlar)
+
+POST /api/posts/:id/comments - Yorum yap
+GET /api/posts/:id/comments - Yorumları getir
+Likes (Beğeniler)
+
+POST /api/posts/:id/like - Beğen
+DELETE /api/posts/:id/unlike - Beğeniyi geri al
+Reports (Şikayetler)
+
+POST /api/reports - Şikayet et
+Admin Routes
+
+Admin paneli için endpoint'ler
+ 
+🔴 #30 - Bcrypt Password Hashing (GÜVENLİK!)
+
+Şu an şifreler plain text - hemen düzeltilmeli
+Backend register + login güncellenecek
+15-20 dakika sürer
+
+Schools verisi ekle — Türkiye üniversiteleri listesini schools tablosuna doldur. — completed
+Courses verisi ekle — Popüler dersleri courses tablosuna ekle. — completed
+Bcrypt şifre hash'leme — Backend register/login şifrelerini bcrypt ile hash'le. — not-started
+User profile routes — Profil güncelleme/getirme endpoint'leri ekle. — not-started
+Course routes — Ders ekleme/listeleme endpoint'leri. — not-started
+Match algorithm — Ders/okul bazlı eşleştirme algoritması. — not-started
+Groups API — Grup oluşturma ve üye yönetimi endpoint'leri. — not-started
+Notifications API — Bildirim oluşturma, listeleme ve okundu işaretleme. — not-started
+File upload sistemi — Multer + S3/local dosya yükleme altyapısı. — not-started
+WebSocket / Socket.io — Gerçek zamanlı mesajlaşma altyapısı. — not-started
+Flutter API service — Flutter için API servis katmanı. — not-started
+Chat UI + real-time — Flutter'da sohbet ekranları ve canlı mesajlaşma. — not-started
+Profile screens — Flutter profil görüntüleme/düzenleme ekranları. — not-started
+Match algoritması iyileştir — Eşleşme skorlarını iyileştir. — not-started
+Push notifications (FCM) — FCM token & bildirim akışı. — not-started
+Image compression & CDN — Görsel sıkıştırma ve CDN entegrasyonu. — not-started
+Search & filters — Arama ve filtreleme özellikleri. — not-started
+Analytics — Temel metrik ve raporlama. — not-started
+Admin panel — Yönetim paneli (kullanıcı/moderatör). — not-started
+Testing — Unit/Integration testleri ekle. — not-started
+Performance optimization — Sorgu, cache ve performans tuning. — not-started
+Security audit — Güvenlik taramaları ve düzeltmeler. — not-started
+CI/CD pipeline — Otomatik build/test/deploy hattı. — not-started
+Production deployment — PM2 ve deploy planı. — not-started
+Logging & monitoring — Centralized logs ve monitoring. — not-started
+DB schema: messages/notifications — Mesaj ve bildirim tabloları güncelle. — not-started
+Mesaj ekleri & reaksiyonlar — Dosya ekleri ve emoji reaksiyonlar. — not-started
+Conversations: grup & pin — Konuşma özellikleri (grup, pin, archive). — not-started
+Read receipts & last_read — Okundu bilgisi ve last_read izleme. — not-started
+Rate limiting & validation — API rate limit ve input validation. — not-started
+API documentation — Swagger/OpenAPI dokümantasyonu. — not-started
+
  EKSİK/GELİŞTİRİLMESİ GEREKENLER
 1. Backend Eksikleri
 🔴 Kritik Eksikler:

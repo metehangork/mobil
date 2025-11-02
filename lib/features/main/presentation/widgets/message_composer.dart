@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class MessageComposer extends StatefulWidget {
   final void Function(String) onSend;
-  const MessageComposer({Key? key, required this.onSend}) : super(key: key);
+  const MessageComposer({super.key, required this.onSend});
 
   @override
   State<MessageComposer> createState() => _MessageComposerState();
@@ -48,11 +48,14 @@ class _MessageComposerState extends State<MessageComposer> {
       ),
       child: Row(
         children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.emoji_emotions_outlined)),
+          IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.emoji_emotions_outlined)),
           Expanded(
             child: TextField(
               controller: _controller,
-              decoration: const InputDecoration.collapsed(hintText: 'Mesaj yaz...'),
+              decoration:
+                  const InputDecoration.collapsed(hintText: 'Mesaj yaz...'),
               minLines: 1,
               maxLines: 5,
             ),

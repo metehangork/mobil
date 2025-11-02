@@ -91,7 +91,6 @@ class AppTheme {
     secondary: secondaryOrange,
     tertiary: accentGreen,
     surface: surfaceWhite,
-    background: backgroundLight,
   ).copyWith(
     onPrimary: Colors.white,
     onSecondary: Colors.white,

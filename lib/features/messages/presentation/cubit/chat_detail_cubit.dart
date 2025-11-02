@@ -15,7 +15,8 @@ class ChatDetailCubit extends Cubit<ChatDetailState> {
     required this.repo,
     required this.conversationId,
     required this.currentUserId,
-  }) : super(const ChatDetailState.initial());
+  }) : super(ChatDetailState
+            .initial()); // const kaldırıldı - DateTime.now() const olamaz
 
   Future<void> loadInitial() async {
     emit(state.copyWith(loading: true, error: null));
@@ -35,7 +36,14 @@ class ChatDetailCubit extends Cubit<ChatDetailState> {
     try {
       final messages = await repo.getMessages(conversationId, limit: 100);
       final ordered = List<ChatMessage>.from(messages.reversed);
-      emit(state.copyWith(messages: ordered, error: null));
+
+      // YENİ state emit et - forceUpdate ile lastUpdate değişir, Equatable rebuild tetikler
+      emit(state.copyWith(
+        messages: ordered,
+        error: null,
+        forceUpdate: true, // Her refresh'te lastUpdate değişecek
+      ));
+
       if (ordered.isNotEmpty) {
         await repo.markRead(conversationId, upTo: ordered.last.createdAt);
       }

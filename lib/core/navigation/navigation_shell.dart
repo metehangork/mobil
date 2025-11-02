@@ -24,16 +24,16 @@ class _NavigationShellState extends State<NavigationShell> {
 
   Future<bool> _onWillPop() async {
     final now = DateTime.now();
-    
+
     // If last back press was within 2 seconds, exit app
     if (_lastBackPress != null &&
         now.difference(_lastBackPress!) < TabConfig.doubleTapExitWindow) {
       return true; // Allow exit
     }
-    
+
     // First back press: show toast and record time
     _lastBackPress = now;
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -43,7 +43,7 @@ class _NavigationShellState extends State<NavigationShell> {
         ),
       );
     }
-    
+
     return false; // Prevent exit
   }
 
@@ -51,7 +51,7 @@ class _NavigationShellState extends State<NavigationShell> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           final shouldPop = await _onWillPop();
           if (shouldPop && mounted) {
@@ -67,7 +67,8 @@ class _NavigationShellState extends State<NavigationShell> {
           onTap: widget.onTabChanged,
           selectedItemColor: Theme.of(context).colorScheme.primary,
           unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
-          selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          selectedLabelStyle:
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           unselectedLabelStyle: const TextStyle(fontSize: 12),
           items: AppTabs.all.map((tab) {
             final isSelected = tab.index == widget.currentIndex;

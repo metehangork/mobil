@@ -9,12 +9,12 @@ class UserService {
 
   /// Get current user's full profile
   Future<ApiResponse> getMyProfile() async {
-    return await _client.get('${ApiConfig.users}/me');
+    return await _client.get('${ApiConfig.auth}/me');
   }
 
   /// Get another user's profile
   Future<ApiResponse> getUserProfile(int userId) async {
-    return await _client.get('${ApiConfig.users}/$userId');
+    return await _client.get('${ApiConfig.auth}/user/$userId');
   }
 
   /// Update basic user info

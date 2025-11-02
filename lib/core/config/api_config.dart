@@ -1,18 +1,21 @@
 /// API Configuration
 class ApiConfig {
   // Base URLs
-  // PRODUCTION: Alan adı - kafadarkampus.online (HTTPS çalışmıyor şimdilik)
-  // DEV: Test için IP adresi kullanılabilir
-  static const String baseUrl = 'https://kafadarkampus.online'; // HTTP çalışıyor!
-  static const String baseUrlDev = 'http://37.148.210.244:3000'; // HTTPS (henüz çalışmıyor)
+  // PRODUCTION: Alan adı - kafadarkampus.online
+  // NOT: Domain bağlantı sorunu var, geçici olarak direkt IP kullanıyoruz
+  static const String baseUrl =
+      'http://37.148.210.244:3000'; // Direkt IP kullan
+  static const String baseUrlSecure =
+      'https://kafadarkampus.online'; // HTTPS (sorunlu)
+  static const String baseUrlDev = 'http://37.148.210.244:3000'; // DEV IP
   static const String apiVersion = '/api';
-  
+
   // Full API URL
   static String get apiUrl => '$baseUrl$apiVersion';
-  
+
   // Socket.IO URL
   static String get socketUrl => baseUrl;
-  
+
   // Endpoints
   static const String auth = '/auth';
   static const String users = '/users';
@@ -23,18 +26,19 @@ class ApiConfig {
   static const String groups = '/groups';
   static const String messages = '/messages';
   static const String conversations = '/conversations';
+  static const String chats = '/chats'; // Legacy endpoint (eski sistem)
   static const String notifications = '/notifications';
-  
-  // Timeouts
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
-  
+
+  // Timeouts - Sunucu yavaş olduğu için uzun timeout kullanıyoruz
+  static const Duration connectionTimeout = Duration(seconds: 45);
+  static const Duration receiveTimeout = Duration(seconds: 45);
+
   // Headers
   static Map<String, String> get defaultHeaders => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       };
-  
+
   static Map<String, String> authHeaders(String token) => {
         ...defaultHeaders,
         'Authorization': 'Bearer $token',

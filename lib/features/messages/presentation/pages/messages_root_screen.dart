@@ -14,7 +14,8 @@ class MessagesRootScreen extends StatefulWidget {
   State<MessagesRootScreen> createState() => _MessagesRootScreenState();
 }
 
-class _MessagesRootScreenState extends State<MessagesRootScreen> with AutomaticKeepAliveClientMixin {
+class _MessagesRootScreenState extends State<MessagesRootScreen>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -33,14 +34,15 @@ class _MessagesRootScreenState extends State<MessagesRootScreen> with AutomaticK
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return BlocProvider(
       create: (ctx) {
-        final getToken = () async {
+        Future<String?> getToken() async {
           final s = ctx.read<AuthBloc>().state;
           if (s is AuthAuthenticated) return s.token;
           return null;
-        };
+        }
+
         final cubit = MessagesCubit(ChatRepository(getToken: getToken));
         // initial load
         cubit.load();
@@ -84,19 +86,27 @@ class _MessagesRootScreenState extends State<MessagesRootScreen> with AutomaticK
                       itemBuilder: (ctx, i) {
                         final c = state.conversations[i];
                         return ListTile(
-                          leading: CircleAvatar(child: Text(c.otherUserId.toString().substring(0, 1))),
+                          leading: CircleAvatar(
+                              child: Text(
+                                  c.otherUserId.toString().substring(0, 1))),
                           title: Text('Kullanıcı #${c.otherUserId}'),
-                          subtitle: Text(c.lastMessageText.isNotEmpty ? c.lastMessageText : 'Yeni sohbet'),
+                          subtitle: Text(c.lastMessageText.isNotEmpty
+                              ? c.lastMessageText
+                              : 'Yeni sohbet'),
                           trailing: c.unreadCount > 0
                               ? Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     c.unreadCount.toString(),
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 )
                               : null,
@@ -119,18 +129,18 @@ class _MessagesRootScreenState extends State<MessagesRootScreen> with AutomaticK
     // Find the conversation from state to get user details
     final cubit = context.read<MessagesCubit>();
     final state = cubit.state;
-    
+
     if (state.conversations.isEmpty) return;
-    
+
     final conversation = state.conversations.firstWhere(
       (c) => c.id == conversationId,
       orElse: () => state.conversations.first,
     );
-    
+
     // Get current user ID from auth
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
-    
+
     Navigator.of(context).push(MaterialPageRoute(builder: (_) {
       return ChatDetailPage(
         conversationId: conversationId,
@@ -150,7 +160,8 @@ class _MessagesRootScreenState extends State<MessagesRootScreen> with AutomaticK
             Icon(
               Icons.chat_bubble_outline,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(

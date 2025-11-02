@@ -1,14 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import '../../../core/config/app_config.dart';
+import '../../../core/config/api_config.dart';
 import '../data/chat_models.dart';
 
 class ChatRepository {
   final Future<String?> Function() getToken;
   ChatRepository({required this.getToken});
 
-  String get _base => AppConfig.effectiveApiBaseUrl;
+  String get _base => ApiConfig.apiUrl;
 
   Future<List<ConversationSummary>> listConversations() async {
     final token = await getToken();
@@ -25,21 +25,25 @@ class ChatRepository {
     return data.map((e) => ConversationSummary.fromJson(e)).toList();
   }
 
-  Future<List<ChatMessage>> getMessages(int conversationId, {int limit = 50, DateTime? before}) async {
+  Future<List<ChatMessage>> getMessages(int conversationId,
+      {int limit = 50, DateTime? before}) async {
     final token = await getToken();
     if (token == null) throw Exception('Auth token missing');
     final qp = {
       'limit': '$limit',
       if (before != null) 'before': before.toIso8601String(),
     };
-    final uri = Uri.parse('$_base/chats/$conversationId/messages').replace(queryParameters: qp);
-    final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    final uri = Uri.parse('$_base/chats/$conversationId/messages')
+        .replace(queryParameters: qp);
+    final res =
+        await http.get(uri, headers: {'Authorization': 'Bearer $token'});
     if (res.statusCode != 200) throw Exception('Mesajlar alınamadı');
     final data = json.decode(res.body) as List;
     return data.map((e) => ChatMessage.fromJson(e)).toList();
   }
 
-  Future<ChatMessage> sendMessage(int conversationId, String text, {String type = 'text'}) async {
+  Future<ChatMessage> sendMessage(int conversationId, String text,
+      {String type = 'text'}) async {
     final token = await getToken();
     if (token == null) throw Exception('Auth token missing');
     final uri = Uri.parse('$_base/chats/$conversationId/messages');
@@ -86,9 +90,10 @@ class ChatRepository {
     final token = await getToken();
     if (token == null) throw Exception('No auth token');
 
-    final uri = Uri.parse('${AppConfig.effectiveApiBaseUrl}/auth/search')
+    final uri = Uri.parse('${ApiConfig.apiUrl}/auth/search')
         .replace(queryParameters: {'q': query});
-    final res = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
+    final res =
+        await http.get(uri, headers: {'Authorization': 'Bearer $token'});
 
     if (res.statusCode != 200) {
       throw Exception('Search failed: ${res.statusCode}');

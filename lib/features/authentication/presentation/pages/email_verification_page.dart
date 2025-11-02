@@ -94,10 +94,10 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
           if (state is AuthAuthenticated) {
             // Başarılı doğrulama mesajı göster
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('✓ E-posta doğrulandı! Hoş geldin!'),
+              const SnackBar(
+                content: Text('✓ E-posta doğrulandı! Hoş geldin!'),
                 backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
+                duration: Duration(seconds: 2),
               ),
             );
             // Ana sayfaya yönlendir
@@ -258,7 +258,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
         border: Border.all(
           color: _controllers[index].text.isNotEmpty
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withOpacity(0.5),
+              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
           width: _controllers[index].text.isNotEmpty ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../authentication/presentation/bloc/auth_bloc.dart';
-import '../../../../core/models/user_model.dart';
+import '../../../../core/services/profile_service.dart';
+import '../../../../core/services/api_client.dart';
 
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({super.key});
@@ -14,12 +15,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late TextEditingController _nameController;
   late TextEditingController _bioController;
   late TextEditingController _hobbiesController;
+  late ProfileService _profileService;
 
   final _formKey = GlobalKey<FormState>();
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+    _profileService = ProfileService(ApiClient());
     final user = (context.read<AuthBloc>().state as AuthAuthenticated).user;
     _nameController = TextEditingController(text: user.name);
     _bioController = TextEditingController(text: user.bio);
@@ -34,17 +38,78 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     super.dispose();
   }
 
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      final currentState = context.read<AuthBloc>().state;
-      if (currentState is AuthAuthenticated) {
-        final updatedUser = currentState.user.copyWith(
-          name: _nameController.text,
-          bio: _bioController.text,
-          hobbies: _hobbiesController.text.split(',').map((e) => e.trim()).toList(),
+  void _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      // API'ye profile güncelleme isteği gönder
+      final names = _nameController.text.trim().split(' ');
+      final firstName = names.isNotEmpty ? names.first : '';
+      final lastName = names.length > 1 ? names.skip(1).join(' ') : '';
+
+      final response = await _profileService.updateProfile({
+        'firstName': firstName,
+        'lastName': lastName,
+        'bio': _bioController.text.trim(),
+        'hobbies': _hobbiesController.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
+      });
+
+      if (!mounted) return;
+
+      if (response.isSuccess) {
+        // Başarılı - Local state'i güncelle
+        final currentState = context.read<AuthBloc>().state;
+        if (currentState is AuthAuthenticated) {
+          final updatedUser = currentState.user.copyWith(
+            name: _nameController.text.trim(),
+            bio: _bioController.text.trim(),
+            hobbies: _hobbiesController.text
+                .split(',')
+                .map((e) => e.trim())
+                .where((e) => e.isNotEmpty)
+                .toList(),
+          );
+          context
+              .read<AuthBloc>()
+              .add(AuthUpdateProfileEvent(updatedUser: updatedUser));
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil başarıyla güncellendi'),
+            backgroundColor: Colors.green,
+          ),
         );
-        context.read<AuthBloc>().add(AuthUpdateProfileEvent(updatedUser: updatedUser));
         Navigator.of(context).pop();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.message ?? 'Profil güncellenemedi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Hata: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
       }
     }
   }
@@ -55,11 +120,21 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       appBar: AppBar(
         title: const Text('Profili Düzenle'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveProfile,
-            tooltip: 'Kaydet',
-          ),
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: _saveProfile,
+              tooltip: 'Kaydet',
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -74,7 +149,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
                       child: const Icon(Icons.person, size: 50),
                     ),
                     Positioned(
@@ -84,9 +160,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                         radius: 18,
                         backgroundColor: Theme.of(context).colorScheme.primary,
                         child: IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                          icon: const Icon(Icons.camera_alt,
+                              size: 20, color: Colors.white),
                           onPressed: () {
-                            // TODO: Fotoğraf yükleme mantığı
+                            // Fotoğraf yükleme mantığı eklenecek
                           },
                         ),
                       ),
@@ -128,7 +205,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              // TODO: Eşleşme tercihlerini düzenlemek için widget'lar eklenecek
+              // Eşleşme tercihlerini düzenlemek için widget'lar eklenecek
             ],
           ),
         ),

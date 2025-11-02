@@ -3,7 +3,7 @@ import '../mock/chat_mock.dart';
 
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
-  const MessageBubble({Key? key, required this.message}) : super(key: key);
+  const MessageBubble({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -14,17 +14,26 @@ class MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceVariant,
+          color: isMe
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(message.sender, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isMe ? Colors.white : null)),
+            Text(message.sender,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isMe ? Colors.white : null)),
             const SizedBox(height: 6),
-            Text(message.text, style: TextStyle(color: isMe ? Colors.white : null)),
+            Text(message.text,
+                style: TextStyle(color: isMe ? Colors.white : null)),
             const SizedBox(height: 4),
-            Text(message.time, style: TextStyle(fontSize: 10, color: isMe ? Colors.white70 : Colors.grey)),
+            Text(message.time,
+                style: TextStyle(
+                    fontSize: 10, color: isMe ? Colors.white70 : Colors.grey)),
           ],
         ),
       ),

@@ -6,7 +6,7 @@ import '../mock/chat_mock.dart';
 class ChatView extends StatefulWidget {
   final String roomId;
   final String roomName;
-  const ChatView({Key? key, required this.roomId, required this.roomName}) : super(key: key);
+  const ChatView({super.key, required this.roomId, required this.roomName});
 
   @override
   State<ChatView> createState() => _ChatViewState();

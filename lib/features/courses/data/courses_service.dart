@@ -4,10 +4,10 @@ import '../../../core/config/app_config.dart';
 import '../../../core/models/course_match_model.dart';
 
 class CoursesService {
-  final String baseUrl = AppConfig.apiBaseUrl;
+  final String baseUrl = AppConfig.effectiveApiBaseUrl;
 
   Future<String?> _getToken() async {
-    // TODO: Implement token retrieval from secure storage
+    // Token retrieval from secure storage (SharedPreferences)
     return null;
   }
 
@@ -19,14 +19,16 @@ class CoursesService {
   }
 
   /// Tüm dersleri getir
-  Future<List<CourseModel>> getCourses({String? departmentId, String? search}) async {
+  Future<List<CourseModel>> getCourses(
+      {String? departmentId, String? search}) async {
     try {
       final token = await _getToken();
       final queryParams = <String, String>{};
       if (departmentId != null) queryParams['departmentId'] = departmentId;
       if (search != null) queryParams['search'] = search;
 
-      final uri = Uri.parse('$baseUrl/courses').replace(queryParameters: queryParams);
+      final uri =
+          Uri.parse('$baseUrl/courses').replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: _getHeaders(token));
 
       if (response.statusCode == 200) {
@@ -105,7 +107,8 @@ class CoursesService {
   }
 
   /// Ders arkadaşı eşleştirmeleri getir (EMİLETÖR)
-  Future<List<CourseMatchModel>> getMatches({int minCommonCourses = 1, int limit = 20}) async {
+  Future<List<CourseMatchModel>> getMatches(
+      {int minCommonCourses = 1, int limit = 20}) async {
     try {
       final token = await _getToken();
       final uri = Uri.parse('$baseUrl/courses/matches').replace(

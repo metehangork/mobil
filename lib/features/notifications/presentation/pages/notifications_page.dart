@@ -41,7 +41,8 @@ class NotificationsPage extends StatelessWidget {
         ),
         body: BlocBuilder<NotificationsCubit, NotificationsState>(
           builder: (context, state) {
-            if (state is NotificationsLoading || state is NotificationsInitial) {
+            if (state is NotificationsLoading ||
+                state is NotificationsInitial) {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is NotificationsError) {
@@ -61,7 +62,7 @@ class NotificationsPage extends StatelessWidget {
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: color.withOpacity(.15),
+                      backgroundColor: color.withValues(alpha: 0.15),
                       child: Icon(_icon(n.priority), color: color),
                     ),
                     title: Text(n.title),
@@ -69,7 +70,9 @@ class NotificationsPage extends StatelessWidget {
                     trailing: n.read
                         ? const Icon(Icons.done, size: 18)
                         : TextButton(
-                            onPressed: () => context.read<NotificationsCubit>().markAsRead(n.id),
+                            onPressed: () => context
+                                .read<NotificationsCubit>()
+                                .markAsRead(n.id),
                             child: const Text('Okundu'),
                           ),
                     onTap: n.route == null

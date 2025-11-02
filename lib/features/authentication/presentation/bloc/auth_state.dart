@@ -12,7 +12,6 @@ class AuthLoading extends AuthState {}
 
 class AuthUnauthenticated extends AuthState {}
 
-
 class AuthAuthenticated extends AuthState {
   final UserModel user;
   final String token;
@@ -36,3 +35,5 @@ class AuthError extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+class PasswordResetRequested extends AuthState {}

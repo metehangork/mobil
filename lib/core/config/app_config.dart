@@ -1,13 +1,14 @@
 import 'dart:io';
 
 class AppConfig {
-  // Production API URL  
-  static const String productionApiBaseUrl = 'https://kafadarkampus.online/api';
-  
+  // Production API URL - IP kullanıyoruz (Domain DNS sorunu var!)
+  // Domain: kafadarkampus.online -> IP: 37.148.210.244:3000
+  static const String productionApiBaseUrl = 'http://37.148.210.244:3000/api';
+
   // Development/Test sunucu IP'leri
   static const List<String> _developmentServerIPs = [
     'http://192.168.1.143:3000', // Eski ev ağı IP
-    'http://10.168.251.148:3000',  // Kampüs ağı IP
+    'http://10.168.251.148:3000', // Kampüs ağı IP
   ];
 
   // Ana API Base URL - Production'da çalışıyoruz!
@@ -18,11 +19,11 @@ class AppConfig {
     if (envUrl.isNotEmpty) {
       return envUrl;
     }
-    
+
     // 2. Production: Gerçek sunucu URL'i kullan
     return productionApiBaseUrl;
   }
-  
+
   // Development server IP'lerini döndür (fallback için kullanılabilir)
   static List<String> get developmentServerIPs => _developmentServerIPs;
 

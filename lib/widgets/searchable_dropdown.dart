@@ -7,11 +7,12 @@ class SearchableDropdown extends StatefulWidget {
   final String label;
   final IconData icon;
   final String? value;
-  final Function(String?) onChanged;
+  final Function(String?, int?) onChanged; // Hem name hem ID döndür
   final String? Function(String?)? validator;
   final String apiEndpoint; // 'schools' ya da 'departments'
   final String displayField; // hangi alanı gösterecek
   final String valueField; // hangi alanı value olarak kullanacak
+  final String idField; // ID field name (varsayılan 'id')
 
   const SearchableDropdown({
     super.key,
@@ -22,6 +23,7 @@ class SearchableDropdown extends StatefulWidget {
     required this.apiEndpoint,
     required this.displayField,
     required this.valueField,
+    this.idField = 'id',
     this.validator,
   });
 
@@ -42,7 +44,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
   void initState() {
     super.initState();
     _fetchItems();
-    
+
     // Eğer başlangıç değeri varsa, onu display name'e çevir
     if (widget.value != null) {
       _selectedDisplayName = widget.value;
@@ -51,27 +53,83 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
 
   Future<void> _fetchItems([String? searchQuery]) async {
     setState(() => _isLoading = true);
-    
-    try {
-      final apiUrl = AppConfig.effectiveApiBaseUrl;
-      final queryParam = searchQuery?.isNotEmpty == true ? '?search=${Uri.encodeComponent(searchQuery!)}' : '';
-      final uri = Uri.parse('$apiUrl/${widget.apiEndpoint}$queryParam');
-      
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final items = data is Map && data.containsKey('data') 
-            ? data['data'] as List<dynamic>
-            : data as List<dynamic>;
-            
-        setState(() {
-          _items = items.cast<Map<String, dynamic>>();
-          _filteredItems = _items;
-        });
+
+    // Retry mekanizması ile 3 deneme yap
+    int retries = 3;
+    int attempt = 0;
+
+    while (attempt < retries) {
+      try {
+        final apiUrl = AppConfig.effectiveApiBaseUrl;
+        final queryParam = searchQuery?.isNotEmpty == true
+            ? '?search=${Uri.encodeComponent(searchQuery!)}'
+            : '';
+        final uri = Uri.parse('$apiUrl/${widget.apiEndpoint}$queryParam');
+
+        debugPrint(
+            '🔄 Fetching ${widget.apiEndpoint} (attempt ${attempt + 1}/$retries): $uri');
+
+        final response = await http.get(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            throw Exception('Request timeout after 15 seconds');
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final items = data is Map && data.containsKey('data')
+              ? data['data'] as List<dynamic>
+              : data as List<dynamic>;
+
+          setState(() {
+            _items = items.cast<Map<String, dynamic>>();
+            _filteredItems = _items;
+          });
+
+          debugPrint(
+              '✅ Successfully fetched ${_items.length} items from ${widget.apiEndpoint}');
+          break; // Başarılı olduysa döngüden çık
+        } else {
+          debugPrint(
+              '⚠️ HTTP ${response.statusCode} from ${widget.apiEndpoint}');
+          throw Exception('HTTP ${response.statusCode}');
+        }
+      } catch (e) {
+        attempt++;
+        debugPrint(
+            '❌ Error fetching ${widget.apiEndpoint} (attempt $attempt/$retries): $e');
+
+        if (attempt >= retries) {
+          // Son deneme de başarısız olduysa kullanıcıya hata göster
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text('${widget.label} yüklenemedi. Lütfen tekrar deneyin.'),
+                backgroundColor: Colors.red,
+                action: SnackBarAction(
+                  label: 'Tekrar Dene',
+                  textColor: Colors.white,
+                  onPressed: () => _fetchItems(searchQuery),
+                ),
+              ),
+            );
+          }
+        } else {
+          // Bir sonraki deneme öncesi kısa bekle
+          await Future.delayed(Duration(seconds: attempt));
+        }
       }
-    } catch (e) {
-      debugPrint('❌ Error fetching ${widget.apiEndpoint}: $e');
-    } finally {
+    }
+
+    if (mounted) {
       setState(() => _isLoading = false);
     }
   }
@@ -113,7 +171,10 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
           child: Container(
             decoration: BoxDecoration(
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.5),
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -122,24 +183,28 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
               title: Text(
                 _selectedDisplayName ?? widget.label,
                 style: TextStyle(
-                  color: _selectedDisplayName != null 
+                  color: _selectedDisplayName != null
                       ? Theme.of(context).colorScheme.onSurface
                       : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               trailing: Icon(
-                _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                _isExpanded
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
               ),
             ),
           ),
         ),
-        
         if (_isExpanded) ...[
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.5),
               ),
               borderRadius: BorderRadius.circular(12),
               color: Theme.of(context).colorScheme.surface,
@@ -168,12 +233,13 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 16),
                     ),
                     onChanged: _onSearchChanged,
                   ),
                 ),
-                
+
                 // Sonuçlar listesi
                 Container(
                   constraints: const BoxConstraints(maxHeight: 200),
@@ -187,15 +253,18 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                       : _filteredItems.isEmpty
                           ? Center(
                               child: Padding(
-                                padding: EdgeInsets.all(16.0),
+                                padding: const EdgeInsets.all(16.0),
                                 child: Text(
-                                  _searchController.text.isNotEmpty && _searchController.text.length < 3
+                                  _searchController.text.isNotEmpty &&
+                                          _searchController.text.length < 3
                                       ? 'En az 3 karakter girin'
                                       : _searchController.text.length >= 3
                                           ? 'Sonuç bulunamadı'
                                           : '${widget.label} aramak için yazın',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                 ),
                               ),
@@ -205,9 +274,12 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                               itemCount: _filteredItems.length,
                               itemBuilder: (context, index) {
                                 final item = _filteredItems[index];
-                                final displayValue = item[widget.displayField]?.toString() ?? '';
-                                final itemValue = item[widget.valueField]?.toString() ?? '';
-                                
+                                final displayValue =
+                                    item[widget.displayField]?.toString() ?? '';
+                                final itemValue =
+                                    item[widget.valueField]?.toString() ?? '';
+                                final itemId = item[widget.idField] as int?;
+
                                 return ListTile(
                                   title: Text(displayValue),
                                   onTap: () {
@@ -216,7 +288,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                                       _isExpanded = false;
                                       _searchController.clear();
                                     });
-                                    widget.onChanged(itemValue);
+                                    widget.onChanged(itemValue, itemId);
                                   },
                                 );
                               },

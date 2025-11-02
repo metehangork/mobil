@@ -21,7 +21,6 @@ test test test test
 - **Email:** Nodemailer
 - **Güvenlik:** helmet, cors, express-rate-limit
 - **Deployment:** PM2 process manager
-- **Sunucu:** 10.168.251.148:3000
 - **Dosya Yapısı:**
   - `server/server.js` - Ana sunucu dosyası
   - `server/src/routes/` - API endpoint'leri (auth, chats, schools, departments)
@@ -95,9 +94,10 @@ test test test test
 - `.env` dosyası gerekli (DB credentials, JWT secret)
 
 ### Production
-- Sunucu: 10.168.251.148
+- Sunucu: 37.148.210.244:3000 (Dev/Test)
+- Domain: kafadarkampus.online (HTTP)
 - PM2 ile yönetiliyor
-- SSH: `ssh root1@10.168.251.148`
+- SSH: `ssh root@37.148.210.244`
 - Restart: `pm2 restart unicampus-api`
 
 ### Flutter
@@ -189,13 +189,7 @@ NOT: Sistemi ikiye ayırıyoruz: Mobil (Flutter) ve Arka Plan (Backend API). Yen
 - `server/logs/` – Sunucu logları
 - `server/package.json` – Script’ler (örn. `pm2:restart`, `start`)
 
-### Production Sunucu (10.168.251.148)
-- Klasör: `/home/root1/server/`
-  - `server.js`, `src/routes/*`, `src/middleware/*`, `src/db/*`
-- Yönetim: PM2
-  - `pm2 status`, `pm2 restart unicampus-api`, `pm2 logs unicampus-api`
-- Dağıtım: SCP ile dosya kopyalama
-  - Örnek: `scp f:/mobil/server/src/routes/auth.js root1@10.168.251.148:server/src/routes/`
+
 
 ## Bakım Notu (Önemli)
 - Yeni her dosya/klasör eklendiğinde bu dokümanı güncelleyin.

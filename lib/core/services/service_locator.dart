@@ -3,6 +3,7 @@ import 'api_client.dart';
 import 'auth_service.dart';
 import 'user_service.dart';
 import 'school_service.dart';
+// import 'department_service.dart'; // Bu servis henüz oluşturulmamış
 import 'course_service.dart';
 import 'match_service.dart';
 import 'group_service.dart';
@@ -41,7 +42,7 @@ class ServiceLocator {
     _services[AuthService] = AuthService(apiClient, prefs);
     _services[UserService] = UserService(apiClient);
     _services[SchoolService] = SchoolService(apiClient);
-    _services[DepartmentService] = DepartmentService(apiClient);
+    // _services[DepartmentService] = DepartmentService(apiClient); // Bu servis henüz oluşturulmamış
     _services[CourseService] = CourseService(apiClient);
     _services[MatchService] = MatchService(apiClient);
     _services[GroupService] = GroupService(apiClient);
@@ -87,7 +88,7 @@ class ServiceLocator {
   static AuthService get auth => get<AuthService>();
   static UserService get user => get<UserService>();
   static SchoolService get school => get<SchoolService>();
-  static DepartmentService get department => get<DepartmentService>();
+  // static DepartmentService get department => get<DepartmentService>(); // Bu servis henüz oluşturulmamış
   static CourseService get course => get<CourseService>();
   static MatchService get match => get<MatchService>();
   static GroupService get group => get<GroupService>();

@@ -10,11 +10,11 @@ class CoursesRootScreen extends StatefulWidget {
   State<CoursesRootScreen> createState() => _CoursesRootScreenState();
 }
 
-class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKeepAliveClientMixin {
+class _CoursesRootScreenState extends State<CoursesRootScreen>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
   final CoursesService _coursesService = CoursesService();
-  
-  bool _isRefreshing = false;
+
   bool _isLoading = true;
   List<CourseModel> _myCourses = [];
   List<CourseMatchModel> _matches = [];
@@ -39,7 +39,7 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
     try {
       final courses = await _coursesService.getMyCourses();
       final matches = await _coursesService.getMatches();
-      
+
       if (mounted) {
         setState(() {
           _myCourses = courses;
@@ -58,11 +58,7 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
   }
 
   Future<void> _onRefresh() async {
-    setState(() => _isRefreshing = true);
     await _loadData();
-    if (mounted) {
-      setState(() => _isRefreshing = false);
-    }
   }
 
   @override
@@ -74,7 +70,7 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('EMİLETÖR - Ders Arkadaşı Bul'),
@@ -287,7 +283,8 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
             Icon(
               Icons.book_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(
@@ -322,7 +319,8 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
             Icon(
               Icons.people_outline,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(
@@ -380,7 +378,8 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Dersi Çıkar'),
-        content: Text('${course.name} dersini çıkarmak istediğinize emin misiniz?'),
+        content:
+            Text('${course.name} dersini çıkarmak istediğinize emin misiniz?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -417,7 +416,8 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${match.matchedUser.firstName} ${match.matchedUser.lastName}'),
+        title: Text(
+            '${match.matchedUser.firstName} ${match.matchedUser.lastName}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -453,7 +453,8 @@ class _CoursesRootScreenState extends State<CoursesRootScreen> with AutomaticKee
   void _sendMessage(CourseMatchModel match) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${match.matchedUser.firstName}\'a mesaj gönderme özelliği yakında...'),
+        content: Text(
+            '${match.matchedUser.firstName}\'a mesaj gönderme özelliği yakında...'),
       ),
     );
   }

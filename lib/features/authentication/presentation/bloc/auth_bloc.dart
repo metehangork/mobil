@@ -1,12 +1,17 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/models/user_model.dart';
+import '../../../../core/models/user_preferences_model.dart';
+import '../../../../core/models/user_stats_model.dart';
+import '../../../../core/models/profile_visibility_model.dart';
 import '../../../../core/services/service_locator.dart';
+import '../../../../core/services/firebase_notification_service.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -23,6 +28,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthVerifyEmailEvent>(_onVerifyEmail);
     on<AuthResendCodeEvent>(_onResendCode);
     on<AuthUpdateProfileEvent>(_onUpdateProfile);
+    on<RequestPasswordReset>(_onRequestPasswordReset);
     // Initial auth check
     add(const AuthCheckStatus());
   }
@@ -88,30 +94,100 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogin(AuthLoginEvent event, Emitter<AuthState> emit) async {
-    debugPrint('🔥 AUTH BLOC: _onLogin called with email: ${event.email}');
+    debugPrint('� AUTH BLOC: Login with email: ${event.email}');
     emit(AuthLoading());
 
     try {
       // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
       final authService = ServiceLocator.auth;
 
-      // Email ile verification code iste
-      debugPrint(
-          '📧 AUTH BLOC: Requesting verification code for ${event.email}');
-      final codeResponse =
-          await authService.requestVerificationCode(event.email);
+      // Email ve şifre ile giriş
+      final loginResponse =
+          await authService.login(event.email, event.password);
 
-      if (!codeResponse.isSuccess) {
-        emit(AuthError(message: codeResponse.message ?? 'Email gönderilemedi'));
+      if (!loginResponse.isSuccess) {
+        debugPrint('❌ AUTH BLOC: Login failed: ${loginResponse.message}');
+        emit(AuthError(message: loginResponse.message ?? 'Giriş başarısız'));
         return;
       }
 
-      // Kullanıcı verification code'u girmeli - şimdilik email verification sayfasına yönlendir
-      // NOT: Login için şifre yerine email verification kullanıyoruz
-      emit(AuthError(message: 'Lütfen email adresinize gelen kodu girin'));
+      // Kullanıcı bilgilerini al
+      debugPrint('✅ AUTH BLOC: Login successful, fetching user profile...');
+      final userService = ServiceLocator.user;
+      final userResponse = await userService.getMyProfile();
+
+      if (!userResponse.isSuccess) {
+        debugPrint('❌ AUTH BLOC: Failed to fetch user profile');
+        emit(const AuthError(message: 'Kullanıcı bilgileri alınamadı'));
+        return;
+      }
+
+      // UserModel oluştur
+      final userData = userResponse.data;
+      final token = loginResponse.data['token'] ?? '';
+      final user = UserModel(
+        id: userData['id']?.toString() ?? '',
+        email: userData['email'] ?? event.email,
+        name: userData['full_name'] ?? 'Kullanıcı',
+        university: userData['school_name'] ?? 'Bilinmiyor',
+        department: userData['department_name'] ?? 'Bilinmiyor',
+        classYear: userData['study_level'] ?? 1,
+        isVerified: userData['is_verified'] ?? true,
+        courses: const [],
+        createdAt:
+            DateTime.tryParse(userData['created_at'] ?? '') ?? DateTime.now(),
+        bio: userData['bio'],
+        hobbies: (userData['interests'] as List?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            const [],
+        preferences: const UserPreferences(),
+        stats: const UserStats(),
+        profileCompletion: userData['profile_completion'] ?? 0,
+        visibility: const ProfileVisibility(),
+        badges: const [],
+      );
+
+      debugPrint('✅ AUTH BLOC: User authenticated: ${user.email}');
+      emit(AuthAuthenticated(user: user, token: token));
+
+      // FCM token'ı backend'e gönder
+      _sendFCMTokenToBackend(token);
     } catch (e) {
-      debugPrint('❌ AUTH BLOC: Login error: ${e.toString()}');
+      debugPrint('💥 AUTH BLOC: Login error: ${e.toString()}');
       emit(AuthError(message: 'Giriş sırasında hata oluştu: ${e.toString()}'));
+    }
+  }
+
+  /// FCM token'ı backend'e gönder
+  Future<void> _sendFCMTokenToBackend(String authToken) async {
+    try {
+      final fcmService = FirebaseNotificationService();
+      final fcmToken = fcmService.fcmToken;
+
+      if (fcmToken == null) {
+        debugPrint('⚠️ FCM token henüz hazır değil');
+        return;
+      }
+
+      // Platform bilgisi
+      String platform = 'unknown';
+      if (!kIsWeb) {
+        platform = Platform.isAndroid
+            ? 'android'
+            : (Platform.isIOS ? 'ios' : 'unknown');
+      }
+
+      final authService = ServiceLocator.auth;
+      final response = await authService.sendFCMToken(fcmToken, platform);
+
+      if (response.isSuccess) {
+        debugPrint('✅ FCM token backend\'e gönderildi');
+      } else {
+        debugPrint('⚠️ FCM token gönderilemedi: ${response.message}');
+      }
+    } catch (e) {
+      debugPrint('❌ FCM token gönderme hatası: $e');
     }
   }
 
@@ -133,17 +209,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       debugPrint('🔄 AUTH BLOC: Starting registration for ${event.email}');
+      debugPrint(
+          '🏫 AUTH BLOC: School ID: ${event.schoolId}, Department ID: ${event.departmentId}');
 
       // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
       final authService = ServiceLocator.auth;
 
-      // Email verification code iste
-      final response = await authService.requestVerificationCode(event.email);
+      // Yeni register endpoint'ini kullan (direkt token döner)
+      final response = await authService.register(
+        email: event.email,
+        password: event.password,
+        firstName: event.firstName,
+        lastName: event.lastName,
+        schoolId: event.schoolId,
+        departmentId: event.departmentId,
+      );
 
       if (response.isSuccess) {
+        // Kayıt başarılı, email doğrulama gerekiyor
         emit(AuthRegistrationSuccess(email: event.email));
         debugPrint(
-            '✅ AUTH BLOC: Registration success -> navigating to verify screen');
+            '✅ AUTH BLOC: Registration success, email verification required');
       } else {
         String message = response.message ?? 'Kayıt sırasında hata oluştu';
         emit(AuthError(message: message));
@@ -207,7 +293,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           department: userData['department_name'] ?? 'Bilinmiyor',
           classYear: userData['study_level'] ?? 1,
           isVerified: userData['is_verified'] ?? true,
-          courses: [],
+          courses: const [],
           createdAt:
               DateTime.tryParse(userData['created_at'] ?? '') ?? DateTime.now(),
           bio: userData['bio'],
@@ -239,7 +325,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   Future<void> _onResendCode(
       AuthResendCodeEvent event, Emitter<AuthState> emit) async {
     try {
-      debugPrint('� AUTH BLOC: Resending verification code for ${event.email}');
+      emit(AuthLoading());
+      debugPrint('📧 AUTH BLOC: Sending verification code for ${event.email}');
 
       // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
       final authService = ServiceLocator.auth;
@@ -247,15 +334,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final response = await authService.requestVerificationCode(event.email);
 
       if (response.isSuccess) {
-        debugPrint('✅ AUTH BLOC: Verification code resent successfully');
-        // State değiştirmiyoruz, sadece başarılı olduğunu log'luyoruz
-        // UI'da SnackBar ile bilgi verilebilir
+        debugPrint('✅ AUTH BLOC: Verification code sent successfully');
+        // Login için de aynı state'i emit et
+        emit(AuthRegistrationSuccess(email: event.email));
       } else {
-        debugPrint('❌ AUTH BLOC: Failed to resend code: ${response.message}');
+        debugPrint('❌ AUTH BLOC: Failed to send code: ${response.message}');
         emit(AuthError(message: response.message ?? 'Kod gönderilemedi'));
       }
     } catch (e) {
-      debugPrint('💥 AUTH BLOC: Resend code error: $e');
+      debugPrint('💥 AUTH BLOC: Send code error: $e');
       emit(AuthError(message: 'Kod gönderirken hata oluştu: ${e.toString()}'));
     }
   }
@@ -292,8 +379,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } catch (e) {
         debugPrint('❌ AUTH BLOC: Profile update failed: $e');
         emit(currentState);
-        emit(AuthError(message: 'Profil güncellenirken bir hata oluştu.'));
+        emit(
+            const AuthError(message: 'Profil güncellenirken bir hata oluştu.'));
       }
+    }
+  }
+
+  Future<void> _onRequestPasswordReset(
+      RequestPasswordReset event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+
+    try {
+      debugPrint('🔄 AUTH BLOC: Password reset requested for ${event.email}');
+
+      // GERÇEK API KULLANIMI - ServiceLocator üzerinden AuthService
+      final authService = ServiceLocator.auth;
+
+      // Şifre sıfırlama isteği gönder
+      final response = await authService.forgotPassword(email: event.email);
+
+      if (response.isSuccess) {
+        emit(PasswordResetRequested());
+        debugPrint('✅ AUTH BLOC: Password reset email sent');
+      } else {
+        String message =
+            response.message ?? 'Şifre sıfırlama sırasında hata oluştu';
+        emit(AuthError(message: message));
+        debugPrint('❌ AUTH BLOC: Password reset request failed: $message');
+      }
+    } catch (e) {
+      debugPrint('💥 AUTH BLOC: Password reset error: ${e.toString()}');
+      emit(AuthError(
+          message: 'Şifre sıfırlama sırasında hata oluştu: ${e.toString()}'));
     }
   }
 }

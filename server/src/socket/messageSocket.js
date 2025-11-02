@@ -1,5 +1,7 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
 const { query } = require('../db/pool');
+const fcmService = require('../services/fcmService');
 const {
   setUserOnline,
   getUserStatus,
@@ -26,25 +28,39 @@ function initializeSocket(server) {
     pingInterval: 25000
   });
 
+  // ==================== JWT AUTHENTICATION MIDDLEWARE ====================
+  io.use((socket, next) => {
+    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
+    
+    if (!token) {
+      console.log('❌ Socket bağlantısı reddedildi: Token yok');
+      return next(new Error('Authentication error: Token gerekli'));
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.userId; // Token'dan userId'yi al
+      socket.userEmail = decoded.email; // Email'i de ekleyelim
+      console.log(`✅ Socket authentication başarılı: User ${decoded.userId} (${decoded.email})`);
+      next();
+    } catch (error) {
+      console.log('❌ Socket bağlantısı reddedildi: Geçersiz token');
+      return next(new Error('Authentication error: Geçersiz token'));
+    }
+  });
+
   // Bağlantı sayacı
   let activeConnections = 0;
 
   io.on('connection', (socket) => {
     activeConnections++;
-    console.log(`🔗 Yeni bağlantı: ${socket.id} | Aktif: ${activeConnections}`);
+    console.log(`🔗 Yeni bağlantı: ${socket.id} | User: ${socket.userId} | Aktif: ${activeConnections}`);
 
     // ==================== KULLANICI GİRİŞİ ====================
-    socket.on('user_online', async (data) => {
+    // Otomatik olarak kullanıcıyı çevrimiçi yap (JWT'den userId geldi)
+    (async () => {
       try {
-        const { userId } = data;
-        
-        if (!userId) {
-          socket.emit('error', { message: 'userId gerekli' });
-          return;
-        }
-
-        // Socket'e userId'yi kaydet
-        socket.userId = userId;
+        const userId = socket.userId;
         
         // Kullanıcıyı kendi odasına ekle
         socket.join(`user_${userId}`);
@@ -59,48 +75,77 @@ function initializeSocket(server) {
           timestamp: new Date().toISOString()
         });
 
-        console.log(`👤 Kullanıcı ${userId} çevrimiçi oldu`);
+        console.log(`👤 Kullanıcı ${userId} (${socket.userEmail}) çevrimiçi oldu`);
         
         // Başarı mesajı gönder
         socket.emit('connected', {
           success: true,
           userId,
+          email: socket.userEmail,
           socketId: socket.id
         });
       } catch (error) {
-        console.error('user_online error:', error);
+        console.error('Auto user_online error:', error);
         socket.emit('error', { message: 'Bağlantı hatası', error: error.message });
       }
-    });
+    })();
 
     // ==================== MESAJ GÖNDERME ====================
     socket.on('send_message', async (data) => {
       try {
-        const { senderId, receiverId, content, conversationId } = data;
+        const { conversationId, text } = data;
+
+        // JWT'den gelen userId'yi kullan (güvenlik!)
+        const senderId = socket.userId;
 
         // Validasyon
-        if (!senderId || !receiverId || !content) {
+        if (!conversationId || !text) {
           socket.emit('message_error', { 
-            error: 'senderId, receiverId ve content gerekli' 
+            error: 'conversationId ve text gerekli' 
           });
           return;
         }
 
+        // Güvenlik: Kullanıcının bu conversation'a erişimi var mı kontrol et
+        const accessCheck = await query(`
+          SELECT c.id, m.user1_id, m.user2_id
+          FROM conversations c
+          JOIN matches m ON m.id = c.match_id
+          WHERE c.id = $1 AND ($2 = m.user1_id OR $2 = m.user2_id)
+        `, [conversationId, senderId]);
+
+        if (!accessCheck.rows.length) {
+          console.log(`❌ Erişim reddedildi: User ${senderId} conversation ${conversationId}'ye erişemez`);
+          socket.emit('message_error', { 
+            error: 'Bu konuşmaya erişim yetkiniz yok' 
+          });
+          return;
+        }
+
+        // Alıcı ID'sini bul
+        const match = accessCheck.rows[0];
+        const receiverId = match.user1_id === parseInt(senderId) 
+          ? match.user2_id 
+          : match.user1_id;
+
         // 1. PostgreSQL'e mesajı kaydet
         const result = await query(
-          `INSERT INTO messages (sender_id, receiver_id, content, conversation_id, created_at, is_read)
-           VALUES ($1, $2, $3, $4, NOW(), false)
-           RETURNING id, sender_id, receiver_id, content, conversation_id, created_at, is_read`,
-          [senderId, receiverId, content, conversationId]
+          `INSERT INTO messages (conversation_id, sender_id, message_text, message_type, is_read, created_at)
+           VALUES ($1, $2, $3, 'text', false, NOW())
+           RETURNING id, conversation_id, sender_id, message_text, message_type, is_read, created_at`,
+          [conversationId, senderId, text]
         );
 
         const message = result.rows[0];
-        console.log(`📨 Mesaj kaydedildi: ${senderId} -> ${receiverId}`);
+        console.log(`📨 Mesaj kaydedildi: ${senderId} -> ${receiverId} (conversation: ${conversationId})`);
 
-        // 2. Alıcının çevrimiçi durumunu kontrol et
-        const receiverStatus = await getUserStatus(receiverId);
+        // 2. Conversation'ı güncelle (last_message_at)
+        await query('UPDATE conversations SET last_message_at = NOW() WHERE id = $1', [conversationId]);
 
-        // 3. Mesajı alıcıya gönder (çevrimiçi ise)
+        // 3. Alıcının çevrimiçi durumunu kontrol et
+        const receiverStatus = await getUserStatus(receiverId.toString());
+
+        // 4. Mesajı alıcıya gönder (çevrimiçi ise)
         if (receiverStatus === 'online') {
           io.to(`user_${receiverId}`).emit('new_message', {
             ...message,
@@ -108,18 +153,42 @@ function initializeSocket(server) {
           });
           console.log(`✅ Mesaj alıcıya iletildi (çevrimiçi)`);
         } else {
-          console.log(`📴 Alıcı çevrimdışı, mesaj veritabanında saklandı`);
+          console.log(`📴 Alıcı çevrimdışı, push notification gönderiliyor...`);
+          
+          // Push notification gönder (çevrimdışı kullanıcıya)
+          try {
+            // Gönderenin adını al
+            const senderResult = await query(
+              'SELECT first_name, last_name FROM users WHERE id = $1',
+              [senderId]
+            );
+            const senderName = senderResult.rows.length > 0
+              ? `${senderResult.rows[0].first_name} ${senderResult.rows[0].last_name}`
+              : 'Birisi';
+
+            // FCM notification gönder
+            await fcmService.sendMessageNotification(receiverId, {
+              senderName,
+              messageText: text,
+              conversationId,
+              senderId,
+              messageId: message.id,
+            });
+          } catch (fcmError) {
+            console.error('FCM notification error:', fcmError);
+            // FCM hatası mesaj gönderimini engellemez
+          }
         }
 
-        // 4. Göndericiye onay gönder
+        // 5. Göndericiye onay gönder
         socket.emit('message_sent', {
           success: true,
           message,
           receiverStatus
         });
 
-        // 5. Konuşma önbelleğini temizle (yeni mesaj geldiğinde eski cache geçersiz)
-        await clearConversationCache(senderId, receiverId);
+        // 6. Konuşma önbelleğini temizle (yeni mesaj geldiğinde eski cache geçersiz)
+        await clearConversationCache(senderId.toString(), receiverId.toString());
 
       } catch (error) {
         console.error('send_message error:', error);
@@ -160,34 +229,38 @@ function initializeSocket(server) {
     // ==================== MESAJ OKUNDU BİLDİRİMİ ====================
     socket.on('message_read', async (data) => {
       try {
-        const { messageId, userId } = data;
+        const { messageId } = data;
+        const userId = socket.userId; // JWT'den gelen kullanıcı
 
-        if (!messageId || !userId) {
+        if (!messageId) {
           return;
         }
 
-        // Veritabanında mesajı okundu olarak işaretle
-        await query(
-          `UPDATE messages SET is_read = true WHERE id = $1`,
+        // Veritabanında mesajı okundu olarak işaretle ve read_at timestamp ekle
+        const updateResult = await query(
+          `UPDATE messages 
+           SET is_read = true, read_at = NOW() 
+           WHERE id = $1 AND is_read = false
+           RETURNING sender_id, conversation_id`,
           [messageId]
         );
 
-        // Mesaj gönderene bildir
-        const messageResult = await query(
-          `SELECT sender_id FROM messages WHERE id = $1`,
-          [messageId]
-        );
-
-        if (messageResult.rows.length > 0) {
-          const senderId = messageResult.rows[0].sender_id;
-          io.to(`user_${senderId}`).emit('message_read_receipt', {
-            messageId,
-            readBy: userId,
-            readAt: new Date().toISOString()
-          });
+        if (updateResult.rows.length === 0) {
+          // Mesaj bulunamadı veya zaten okunmuş
+          return;
         }
 
-        console.log(`👁️ Mesaj ${messageId} okundu olarak işaretlendi`);
+        const { sender_id, conversation_id } = updateResult.rows[0];
+
+        // Mesaj gönderene bildir (çevrimiçiyse)
+        io.to(`user_${sender_id}`).emit('message_read_receipt', {
+          messageId,
+          conversationId: conversation_id,
+          readBy: userId,
+          readAt: new Date().toISOString()
+        });
+
+        console.log(`👁️ Mesaj ${messageId} okundu: ${userId} tarafından, ${sender_id}'ye bildirildi`);
       } catch (error) {
         console.error('message_read error:', error);
       }
@@ -196,15 +269,38 @@ function initializeSocket(server) {
     // ==================== KONUŞMA GEÇMİŞİ İSTEĞİ ====================
     socket.on('get_conversation', async (data) => {
       try {
-        const { userId1, userId2, limit = 50, offset = 0 } = data;
+        const { conversationId, limit = 50, offset = 0 } = data;
+        const userId = socket.userId; // JWT'den gelen kullanıcı
 
-        if (!userId1 || !userId2) {
-          socket.emit('conversation_error', { error: 'userId1 ve userId2 gerekli' });
+        if (!conversationId) {
+          socket.emit('conversation_error', { error: 'conversationId gerekli' });
           return;
         }
 
+        // Güvenlik: Kullanıcının bu conversation'a erişimi var mı kontrol et
+        const accessCheck = await query(`
+          SELECT c.id, m.user1_id, m.user2_id
+          FROM conversations c
+          JOIN matches m ON m.id = c.match_id
+          WHERE c.id = $1 AND ($2 = m.user1_id OR $2 = m.user2_id)
+        `, [conversationId, userId]);
+
+        if (!accessCheck.rows.length) {
+          console.log(`❌ Erişim reddedildi: User ${userId} conversation ${conversationId}'ye erişemez`);
+          socket.emit('conversation_error', { 
+            error: 'Bu konuşmaya erişim yetkiniz yok' 
+          });
+          return;
+        }
+
+        // Cache key için user ID'lerini kullan
+        const match = accessCheck.rows[0];
+        const otherUserId = match.user1_id === parseInt(userId) 
+          ? match.user2_id 
+          : match.user1_id;
+
         // Önce cache'den kontrol et
-        const cached = await getCachedConversation(userId1, userId2);
+        const cached = await getCachedConversation(userId.toString(), otherUserId.toString());
         if (cached) {
           socket.emit('conversation_data', {
             messages: cached,
@@ -215,19 +311,18 @@ function initializeSocket(server) {
 
         // Cache'de yoksa veritabanından çek
         const result = await query(
-          `SELECT id, sender_id, receiver_id, content, created_at, is_read
+          `SELECT id, conversation_id, sender_id, message_text, message_type, is_read, read_at, created_at
            FROM messages
-           WHERE (sender_id = $1 AND receiver_id = $2)
-              OR (sender_id = $2 AND receiver_id = $1)
+           WHERE conversation_id = $1
            ORDER BY created_at DESC
-           LIMIT $3 OFFSET $4`,
-          [userId1, userId2, limit, offset]
+           LIMIT $2 OFFSET $3`,
+          [conversationId, limit, offset]
         );
 
         const messages = result.rows;
 
         // Cache'e kaydet
-        await cacheConversation(userId1, userId2, messages);
+        await cacheConversation(userId.toString(), otherUserId.toString(), messages);
 
         socket.emit('conversation_data', {
           messages,
@@ -235,7 +330,7 @@ function initializeSocket(server) {
           count: messages.length
         });
 
-        console.log(`📚 Konuşma geçmişi gönderildi: ${userId1} <-> ${userId2} (${messages.length} mesaj)`);
+        console.log(`📚 Konuşma geçmişi gönderildi: conversation ${conversationId} (${messages.length} mesaj)`);
       } catch (error) {
         console.error('get_conversation error:', error);
         socket.emit('conversation_error', {

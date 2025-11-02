@@ -8,19 +8,17 @@ class GroupsRootScreen extends StatefulWidget {
   State<GroupsRootScreen> createState() => _GroupsRootScreenState();
 }
 
-class _GroupsRootScreenState extends State<GroupsRootScreen> with AutomaticKeepAliveClientMixin {
+class _GroupsRootScreenState extends State<GroupsRootScreen>
+    with AutomaticKeepAliveClientMixin {
   final ScrollController _scrollController = ScrollController();
-  bool _isRefreshing = false;
 
   @override
   bool get wantKeepAlive => true;
 
   Future<void> _onRefresh() async {
-    setState(() => _isRefreshing = true);
     await Future.delayed(const Duration(seconds: 1));
     if (mounted) {
       debugPrint('🔄 GroupsRootScreen: Refreshed');
-      setState(() => _isRefreshing = false);
     }
   }
 
@@ -33,7 +31,7 @@ class _GroupsRootScreenState extends State<GroupsRootScreen> with AutomaticKeepA
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gruplar'),
@@ -78,7 +76,8 @@ class _GroupsRootScreenState extends State<GroupsRootScreen> with AutomaticKeepA
             Icon(
               Icons.group_outlined,
               size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
             Text(

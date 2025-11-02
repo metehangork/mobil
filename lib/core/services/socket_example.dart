@@ -8,10 +8,10 @@ class SocketExample extends StatefulWidget {
   final String chatUserId;
 
   const SocketExample({
-    Key? key,
+    super.key,
     required this.currentUserId,
     required this.chatUserId,
-  }) : super(key: key);
+  });
 
   @override
   State<SocketExample> createState() => _SocketExampleState();
@@ -34,15 +34,16 @@ class _SocketExampleState extends State<SocketExample> {
   /// Socket.io bağlantısını başlat
   void _initializeSocket() {
     // Backend sunucu adresinizi buraya yazın
-    const serverUrl = 'http://192.168.1.5:3000'; // IP'nizi değiştirin!
-    
-    _socketService.connect(serverUrl, widget.currentUserId);
-    
-    // Konuşma geçmişini yükle
-    _socketService.getConversation(
-      userId1: widget.currentUserId,
-      userId2: widget.chatUserId,
-    );
+    const serverUrl = 'https://kafadarkampus.online';
+    const token = 'your-jwt-token-here'; // JWT token gerekli
+
+    _socketService.connect(serverUrl, token);
+
+    // Konuşma geçmişini yükle (opsiyonel - artık kullanılmıyor)
+    // _socketService.getConversation(
+    //   userId1: widget.currentUserId,
+    //   userId2: widget.chatUserId,
+    // );
   }
 
   /// Socket olaylarını dinle
@@ -65,12 +66,25 @@ class _SocketExampleState extends State<SocketExample> {
           setState(() {
             _messages.insert(0, data);
           });
-          
-          // Mesajı okundu olarak işaretle
-          _socketService.markMessageAsRead(
-            messageId: data['id'].toString(),
-            userId: widget.currentUserId,
-          );
+
+          // Mesajı okundu olarak işaretle (server'da id int olabilir veya string)
+          final dynamic rawId = data['id'];
+          int? messageId;
+          if (rawId is int) {
+            messageId = rawId;
+          } else if (rawId is num) {
+            messageId = rawId.toInt();
+          } else if (rawId is String) {
+            messageId = int.tryParse(rawId);
+          }
+
+          if (messageId != null) {
+            _socketService.markMessageAsRead(messageId: messageId);
+          } else {
+            // Fallback: try parse created id or skip
+            debugPrint(
+                'Unable to parse message id for read receipt: ${data['id']}');
+          }
           break;
 
         case 'message_sent':
@@ -109,27 +123,26 @@ class _SocketExampleState extends State<SocketExample> {
     // Kullanıcı durum değişiklikleri
     _socketService.statusStream.listen((data) {
       // Çevrimiçi/çevrimdışı durumunu UI'de gösterebilirsiniz
-      print('Durum değişti: $data');
+      debugPrint('Durum değişti: $data');
     });
   }
 
   /// Mesaj gönder
   void _sendMessage() {
-    final content = _messageController.text.trim();
-    
-    if (content.isEmpty) return;
+    final text = _messageController.text.trim();
 
+    if (text.isEmpty) return;
+
+    // SocketService yeni API: conversationId ve text gerekli
     _socketService.sendMessage(
-      senderId: widget.currentUserId,
-      receiverId: widget.chatUserId,
-      content: content,
+      conversationId: 1, // Konuşma ID'si - dinamik olmalı
+      text: text,
     );
 
     _messageController.clear();
-    
+
     // Yazıyor bildirimini kapat
     _socketService.sendTyping(
-      senderId: widget.currentUserId,
       receiverId: widget.chatUserId,
       isTyping: false,
     );
@@ -139,13 +152,11 @@ class _SocketExampleState extends State<SocketExample> {
   void _onTypingChanged(String text) {
     if (text.isNotEmpty) {
       _socketService.sendTyping(
-        senderId: widget.currentUserId,
         receiverId: widget.chatUserId,
         isTyping: true,
       );
     } else {
       _socketService.sendTyping(
-        senderId: widget.currentUserId,
         receiverId: widget.chatUserId,
         isTyping: false,
       );
@@ -199,9 +210,11 @@ class _SocketExampleState extends State<SocketExample> {
                 final isMine = message['sender_id'] == widget.currentUserId;
 
                 return Align(
-                  alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment:
+                      isMine ? Alignment.centerRight : Alignment.centerLeft,
                   child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                    margin:
+                        const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isMine ? Colors.blue : Colors.grey[300],
@@ -239,7 +252,7 @@ class _SocketExampleState extends State<SocketExample> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   blurRadius: 5,
                 ),
               ],
