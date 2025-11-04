@@ -30,7 +30,7 @@ class WelcomePage extends StatelessWidget {
                   height: 150,
                   width: 150,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withOpacity( 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -53,7 +53,7 @@ class WelcomePage extends StatelessWidget {
                 Text(
                   'Üniversite hayatında yalnız değilsin!\nAynı dersleri alan arkadaşlarınla tanış,\nbirlikte çalış, eğlen.',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: Colors.white.withOpacity( 0.9),
                         height: 1.5,
                       ),
                   textAlign: TextAlign.center,
@@ -62,10 +62,10 @@ class WelcomePage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.white.withOpacity( 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.white.withOpacity( 0.2),
                     ),
                   ),
                   child: Column(
@@ -119,7 +119,7 @@ class WelcomePage extends StatelessWidget {
                   child: Text(
                     'Zaten hesabın var mı? Giriş yap',
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: Colors.white.withOpacity( 0.9),
                       fontSize: 16,
                     ),
                   ),
@@ -141,7 +141,7 @@ class WelcomePage extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: Colors.white.withOpacity( 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -166,7 +166,7 @@ class WelcomePage extends StatelessWidget {
               Text(
                 description,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
+                  color: Colors.white.withOpacity( 0.8),
                   fontSize: 14,
                 ),
               ),

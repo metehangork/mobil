@@ -102,4 +102,32 @@ class ChatRepository {
     final data = json.decode(res.body);
     return List<Map<String, dynamic>>.from(data['users'] ?? []);
   }
+
+  /// Birden fazla kullanıcının online/offline durumunu sorgula (REST API fallback)
+  /// 
+  /// [userIds] - Sorgulanacak kullanıcı ID'leri
+  /// Returns: Map<userId, 'online'|'offline'>
+  Future<Map<String, String>> getUsersOnlineStatus(List<String> userIds) async {
+    final token = await getToken();
+    if (token == null) throw Exception('Token yok');
+    
+    if (userIds.isEmpty) return {};
+    
+    // Comma-separated string oluştur: "1,2,3,4"
+    final idsParam = userIds.join(',');
+    
+    final res = await http.get(
+      Uri.parse('${ApiConfig.apiUrl}/users/status?ids=$idsParam'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    
+    if (res.statusCode != 200) {
+      throw Exception('Status query failed: ${res.statusCode}');
+    }
+    
+    final data = json.decode(res.body) as Map<String, dynamic>;
+    
+    // JSON'dan Map<String, String>'e dönüştür
+    return data.map((key, value) => MapEntry(key, value.toString()));
+  }
 }

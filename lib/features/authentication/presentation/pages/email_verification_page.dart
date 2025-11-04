@@ -258,7 +258,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage>
         border: Border.all(
           color: _controllers[index].text.isNotEmpty
               ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              : Theme.of(context).colorScheme.outline.withOpacity( 0.5),
           width: _controllers[index].text.isNotEmpty ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),

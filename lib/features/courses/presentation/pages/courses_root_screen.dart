@@ -284,7 +284,7 @@ class _CoursesRootScreenState extends State<CoursesRootScreen>
               Icons.book_outlined,
               size: 80,
               color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  Theme.of(context).colorScheme.primary.withOpacity( 0.5),
             ),
             const SizedBox(height: 24),
             Text(
@@ -320,7 +320,7 @@ class _CoursesRootScreenState extends State<CoursesRootScreen>
               Icons.people_outline,
               size: 80,
               color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  Theme.of(context).colorScheme.primary.withOpacity( 0.5),
             ),
             const SizedBox(height: 24),
             Text(

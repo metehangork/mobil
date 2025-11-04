@@ -62,7 +62,7 @@ class NotificationsPage extends StatelessWidget {
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: color.withValues(alpha: 0.15),
+                      backgroundColor: color.withOpacity( 0.15),
                       child: Icon(_icon(n.priority), color: color),
                     ),
                     title: Text(n.title),

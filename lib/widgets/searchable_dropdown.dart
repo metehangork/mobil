@@ -174,7 +174,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                 color: Theme.of(context)
                     .colorScheme
                     .outline
-                    .withValues(alpha: 0.5),
+                    .withOpacity( 0.5),
               ),
               borderRadius: BorderRadius.circular(12),
             ),
@@ -204,7 +204,7 @@ class _SearchableDropdownState extends State<SearchableDropdown> {
                 color: Theme.of(context)
                     .colorScheme
                     .outline
-                    .withValues(alpha: 0.5),
+                    .withOpacity( 0.5),
               ),
               borderRadius: BorderRadius.circular(12),
               color: Theme.of(context).colorScheme.surface,

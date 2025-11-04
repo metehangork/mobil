@@ -267,13 +267,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       color: Theme.of(context)
                           .colorScheme
                           .primaryContainer
-                          .withValues(alpha: 0.3),
+                          .withOpacity( 0.3),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withValues(alpha: 0.3),
+                            .withOpacity( 0.3),
                       ),
                     ),
                     child: Row(
@@ -392,7 +392,7 @@ class _RegisterPageState extends State<RegisterPage> {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.outline.withOpacity( 0.5),
           ),
         ),
         focusedBorder: OutlineInputBorder(

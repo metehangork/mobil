@@ -546,4 +546,77 @@ router.patch('/me/fcm-token', [
   }
 });
 
+/**
+ * @route   GET /api/users/status
+ * @desc    Get online/offline status of multiple users (bulk query)
+ * @query   ids - Comma-separated user IDs (örn: ?ids=1,2,3,4)
+ * @access  Private
+ * @returns {object} Map of userId -> 'online'|'offline'
+ * 
+ * Örnek yanıt:
+ * {
+ *   "1": "online",
+ *   "2": "offline",
+ *   "3": "online"
+ * }
+ */
+router.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const { ids } = req.query;
+
+    if (!ids) {
+      return res.status(400).json({ error: 'ids parametresi gerekli (örn: ?ids=1,2,3)' });
+    }
+
+    // Comma-separated string'i array'e çevir
+    const userIds = ids.split(',').map(id => id.trim()).filter(Boolean);
+
+    if (userIds.length === 0) {
+      return res.status(400).json({ error: 'Geçerli kullanıcı ID\'leri bulunamadı' });
+    }
+
+    if (userIds.length > 100) {
+      return res.status(400).json({ error: 'Maksimum 100 kullanıcı sorgulanabilir' });
+    }
+
+    // Redis'ten durum sorgula (Socket.io ile senkronize)
+    let statusMap = {};
+    
+    try {
+      const { getUserStatus } = require('../config/redis');
+      
+      // Her kullanıcı için Redis'ten durum al
+      for (const userId of userIds) {
+        const status = await getUserStatus(userId);
+        statusMap[userId] = status; // 'online' veya 'offline'
+      }
+      
+      res.json(statusMap);
+    } catch (redisError) {
+      console.error('⚠️ Redis sorgu hatası, fallback: is_online field:', redisError.message);
+      
+      // Redis çalışmıyorsa, PostgreSQL'den last_seen ve is_online'a bak
+      const placeholders = userIds.map((_, i) => `$${i + 1}`).join(',');
+      const result = await query(
+        `SELECT id, is_online, 
+          EXTRACT(EPOCH FROM (NOW() - last_seen_at)) as seconds_since_seen
+         FROM users 
+         WHERE id IN (${placeholders})`,
+        userIds
+      );
+
+      // Kullanıcı son 5 dakika içinde görüldüyse online say
+      result.rows.forEach(row => {
+        const isRecentlyActive = row.seconds_since_seen && row.seconds_since_seen < 300;
+        statusMap[row.id] = (row.is_online && isRecentlyActive) ? 'online' : 'offline';
+      });
+
+      res.json(statusMap);
+    }
+  } catch (error) {
+    console.error('❌ Status sorgu hatası:', error);
+    res.status(500).json({ error: 'Durum sorgulanamadı' });
+  }
+});
+
 module.exports = router;

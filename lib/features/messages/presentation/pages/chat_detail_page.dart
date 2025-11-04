@@ -146,12 +146,30 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     // Online/offline durum değişiklikleri - YENİ subscription oluştur
     _statusSubscription = _socketService.statusStream.listen((data) {
       if (!mounted) return;
+      
+      // Tek kullanıcı durumu
       if (data['userId'] == widget.otherUserId.toString()) {
         setState(() {
           _isOtherUserOnline = data['status'] == 'online';
         });
       }
+      
+      // Bulk status sorgusu yanıtı
+      if (data['type'] == 'online_users' && data['data'] != null) {
+        final Map<String, dynamic> statuses = data['data'] as Map<String, dynamic>;
+        final userStatus = statuses[widget.otherUserId.toString()];
+        if (userStatus != null) {
+          setState(() {
+            _isOtherUserOnline = userStatus == 'online';
+          });
+        }
+      }
     });
+
+    // İlk açılışta kullanıcının online durumunu sorgula
+    if (_socketService.isConnected) {
+      _socketService.getOnlineStatus([widget.otherUserId.toString()]);
+    }
 
     // Yazıyor bildirimi - YENİ subscription oluştur
     _typingSubscription = _socketService.typingStream.listen((data) {
@@ -195,8 +213,13 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
 
-      // jumpTo kullan - animasyon klavye focus'unu bozabilir
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      // Biraz daha bekle - ListView builder yeni item'ı render etsin
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (!mounted || !_scrollController.hasClients) return;
+        
+        // jumpTo kullan - animasyon klavye focus'unu bozabilir
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      });
     });
   }
 
@@ -346,8 +369,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             Expanded(
               child: BlocConsumer<ChatDetailCubit, ChatDetailState>(
                 listener: (context, state) {
-                  if (state.messages.isNotEmpty) {
-                    _scrollToBottom();
+                  // Her state değişikliğinde scroll yap (ilk yükleme dahil)
+                  if (state.messages.isNotEmpty && !state.loading) {
+                    // Loading bitmişse scroll yap
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToBottom();
+                    });
                   }
                   if (state.error != null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -370,7 +397,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             color: Theme.of(context)
                                 .colorScheme
                                 .primary
-                                .withValues(alpha: 0.5),
+                                .withOpacity( 0.5),
                           ),
                           const SizedBox(height: 16),
                           const Text('Henüz mesaj yok'),
@@ -383,6 +410,22 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       ),
                     );
                   }
+                  // İlk yükleme bittiğinde scroll için callback
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (state.messages.isNotEmpty && 
+                        !state.loading && 
+                        _scrollController.hasClients) {
+                      // ListView render olduktan sonra scroll yap
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        if (mounted && _scrollController.hasClients) {
+                          _scrollController.jumpTo(
+                            _scrollController.position.maxScrollExtent
+                          );
+                        }
+                      });
+                    }
+                  });
+
                   return RefreshIndicator(
                     onRefresh: () => context.read<ChatDetailCubit>().refresh(),
                     child: ListView.builder(
@@ -466,7 +509,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
             color: Theme.of(context).scaffoldBackgroundColor,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withOpacity( 0.1),
                 blurRadius: 4,
                 offset: const Offset(0, -2),
               ),

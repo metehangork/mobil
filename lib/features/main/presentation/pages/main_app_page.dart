@@ -114,7 +114,7 @@ class _HomePage extends StatelessWidget {
                   Text(
                     'Bugün 3 yeni eşleşmen var!\nMesajlaşmaya başlamaya hazır mısın?',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: Colors.white.withOpacity( 0.9),
                         ),
                   ),
                 ],
@@ -209,9 +209,9 @@ class _HomePage extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity( 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withOpacity( 0.3)),
         ),
         child: Column(
           children: [

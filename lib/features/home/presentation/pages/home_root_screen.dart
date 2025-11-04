@@ -275,7 +275,7 @@ class _HomeRootScreenState extends State<HomeRootScreen>
     return Chip(
       avatar: Text(reason.icon, style: const TextStyle(fontSize: 14)),
       label: Text(reason.displayText, overflow: TextOverflow.ellipsis),
-      backgroundColor: baseColor.withValues(alpha: 0.15),
+      backgroundColor: baseColor.withOpacity( 0.15),
       labelStyle: TextStyle(color: baseColor, fontSize: 12),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),

@@ -86,9 +86,31 @@ class _MessagesRootScreenState extends State<MessagesRootScreen>
                       itemBuilder: (ctx, i) {
                         final c = state.conversations[i];
                         return ListTile(
-                          leading: CircleAvatar(
-                              child: Text(
-                                  c.otherUserId.toString().substring(0, 1))),
+                          leading: Stack(
+                            children: [
+                              CircleAvatar(
+                                child: Text(
+                                    c.otherUserId.toString().substring(0, 1)),
+                              ),
+                              // Online/Offline indicator
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 14,
+                                  height: 14,
+                                  decoration: BoxDecoration(
+                                    color: c.isOnline ? Colors.green : Colors.grey,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Theme.of(context).scaffoldBackgroundColor,
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                           title: Text('Kullanıcı #${c.otherUserId}'),
                           subtitle: Text(c.lastMessageText.isNotEmpty
                               ? c.lastMessageText
@@ -161,7 +183,7 @@ class _MessagesRootScreenState extends State<MessagesRootScreen>
               Icons.chat_bubble_outline,
               size: 80,
               color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                  Theme.of(context).colorScheme.primary.withOpacity( 0.5),
             ),
             const SizedBox(height: 24),
             Text(

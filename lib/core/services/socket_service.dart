@@ -182,6 +182,20 @@ class SocketService {
       _statusController.add(data);
     });
 
+    // ==================== BULK ONLINE STATUS SORGUSU ====================
+
+    _socket!.on('online_users_data', (data) {
+      developer.log('👥 Çevrimiçi kullanıcılar alındı: $data', name: 'SocketService');
+      _statusController.add({
+        'type': 'online_users',
+        'data': data,
+      });
+    });
+
+    _socket!.on('online_users_error', (data) {
+      developer.log('❌ Online users sorgu hatası: $data', name: 'SocketService');
+    });
+
     // ==================== BAĞLANTI ONAY ====================
 
     _socket!.on('connected', (data) {
@@ -294,17 +308,16 @@ class SocketService {
   ///
   /// [userIds] - Kontrol edilecek kullanıcı ID listesi
   void getOnlineStatus(List<String> userIds) {
-    if (!_isConnected || _socket == null) return;
+    if (!_isConnected || _socket == null) {
+      print('⚠️ [SocketService] Socket bağlı değil, online status sorgulanamıyor');
+      return;
+    }
 
+    print('🔍 [SocketService] Online status sorgulanıyor: ${userIds.length} kullanıcı');
     _socket!.emit('get_online_users', {'userIds': userIds});
-
-    _socket!.on('online_users_data', (data) {
-      developer.log('👥 Çevrimiçi kullanıcılar: $data', name: 'SocketService');
-      _statusController.add({
-        'type': 'online_users',
-        'data': data,
-      });
-    });
+    
+    // NOT: 'online_users_data' listener'ı connect() içinde zaten var,
+    // statusStream'e otomatik düşüyor
   }
 
   /// Manuel çıkış yap

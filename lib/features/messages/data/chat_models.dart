@@ -8,6 +8,7 @@ class ConversationSummary {
   final String lastMessageText;
   final int unreadCount;
   final int otherUserId;
+  final bool isOnline;
 
   ConversationSummary({
     required this.id,
@@ -19,6 +20,7 @@ class ConversationSummary {
     required this.lastMessageText,
     required this.unreadCount,
     required this.otherUserId,
+    this.isOnline = false,
   });
 
   factory ConversationSummary.fromJson(Map<String, dynamic> json) => ConversationSummary(
@@ -31,7 +33,35 @@ class ConversationSummary {
         lastMessageText: json['lastMessageText']?.toString() ?? '',
         unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
         otherUserId: (json['otherUserId'] as num).toInt(),
+        isOnline: json['isOnline'] as bool? ?? false,
       );
+
+  /// Copy with method - durumu güncellemek için
+  ConversationSummary copyWith({
+    int? id,
+    int? user1Id,
+    int? user2Id,
+    String? matchType,
+    String? status,
+    DateTime? lastMessageAt,
+    String? lastMessageText,
+    int? unreadCount,
+    int? otherUserId,
+    bool? isOnline,
+  }) {
+    return ConversationSummary(
+      id: id ?? this.id,
+      user1Id: user1Id ?? this.user1Id,
+      user2Id: user2Id ?? this.user2Id,
+      matchType: matchType ?? this.matchType,
+      status: status ?? this.status,
+      lastMessageAt: lastMessageAt ?? this.lastMessageAt,
+      lastMessageText: lastMessageText ?? this.lastMessageText,
+      unreadCount: unreadCount ?? this.unreadCount,
+      otherUserId: otherUserId ?? this.otherUserId,
+      isOnline: isOnline ?? this.isOnline,
+    );
+  }
 }
 
 class ChatMessage {
